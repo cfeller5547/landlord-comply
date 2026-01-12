@@ -444,7 +444,6 @@ export default function NewCasePage() {
                             address: e.target.value,
                             selectedPropertyId: "",
                           }));
-                          setJurisdictionResult(null);
                           setSelectedProperty(null);
                         }}
                       />
@@ -845,6 +844,12 @@ export default function NewCasePage() {
           </Button>
           {currentStep < 3 ? (
             <div className="flex items-center gap-3">
+              {currentStep === 1 && !canProceedStep1 && (
+                <span className="text-sm text-muted-foreground">
+                  {!formData.address && "Enter street address"}
+                  {formData.address && !jurisdictionResult && "Check coverage to continue"}
+                </span>
+              )}
               {currentStep === 2 && !canProceedStep2 && (
                 <span className="text-sm text-muted-foreground">
                   {!formData.moveOutDate && "Move-out date required"}
