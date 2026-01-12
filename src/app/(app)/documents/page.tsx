@@ -19,19 +19,56 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { TrustBanner } from "@/components/domain";
-import { sampleCases } from "@/lib/mock-data";
+import { requireDb } from "@/lib/db";
+import { getCurrentUser } from "@/lib/auth";
 import { Search, FileText, Download, ExternalLink, FileDown } from "lucide-react";
 
-export default function DocumentsPage() {
-  // Collect all documents from cases
-  const allDocuments = sampleCases.flatMap((c) =>
-    c.documents.map((doc) => ({
-      ...doc,
-      caseName: c.tenants.map((t) => t.name).join(", "),
-      property: `${c.property.city}, ${c.property.state}`,
-      caseId: c.id,
-    }))
-  );
+interface DocumentWithCase {
+  id: string;
+  type: string;
+  version: number;
+  createdAt: Date;
+  caseName: string;
+  property: string;
+  caseId: string;
+}
+
+async function getDocuments(userId: string): Promise<DocumentWithCase[]> {
+  const db = requireDb();
+  if (!db) return [];
+
+  const documents = await db.document.findMany({
+    where: {
+      case: { userId },
+    },
+    include: {
+      case: {
+        include: {
+          property: true,
+          tenants: {
+            where: { isPrimary: true },
+            take: 1,
+          },
+        },
+      },
+    },
+    orderBy: { generatedAt: "desc" },
+  });
+
+  return documents.map((doc) => ({
+    id: doc.id,
+    type: doc.type,
+    version: doc.version,
+    createdAt: doc.generatedAt,
+    caseName: doc.case.tenants[0]?.name || "Unknown",
+    property: `${doc.case.property.city}, ${doc.case.property.state}`,
+    caseId: doc.caseId,
+  }));
+}
+
+export default async function DocumentsPage() {
+  const user = await getCurrentUser();
+  const allDocuments = user ? await getDocuments(user.id).catch(() => []) : [];
 
   return (
     <div className="space-y-6">
