@@ -2,46 +2,20 @@ import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
 
-// Force dynamic rendering to ensure fresh data
-export const dynamic = "force-dynamic";
-
 // GET /api/cases/[id] - Get a single case
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log("[API CASE GET] Fetching case...");
     const user = await getDbUser();
-    console.log("[API CASE GET] User:", user?.id || "NO USER", user?.email || "N/A");
     if (!user) {
-      console.log("[API CASE GET] Unauthorized - no user");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { id } = await params;
-    console.log("[API CASE GET] Case ID:", id, "User ID:", user.id);
     const db = requireDb();
 
-    // First, check if the case exists at all (simple query without includes)
-    const basicCase = await db.case.findUnique({
-      where: { id },
-      select: { id: true, userId: true, ruleSetId: true, propertyId: true },
-    });
-    console.log("[API CASE GET] Basic case lookup:", basicCase ? { id: basicCase.id, userId: basicCase.userId } : "NOT FOUND");
-
-    if (!basicCase) {
-      console.log("[API CASE GET] Case does not exist in database");
-      return NextResponse.json({ error: "Case not found" }, { status: 404 });
-    }
-
-    if (basicCase.userId !== user.id) {
-      console.log("[API CASE GET] User ID mismatch - case belongs to:", basicCase.userId, "but user is:", user.id);
-      return NextResponse.json({ error: "Case not found" }, { status: 404 });
-    }
-
-    // Now fetch with full includes
-    console.log("[API CASE GET] Fetching full case data...");
     const caseData = await db.case.findUnique({
       where: { id, userId: user.id },
       include: {
@@ -69,17 +43,14 @@ export async function GET(
         },
       },
     });
-    console.log("[API CASE GET] Full case data retrieved:", caseData ? "SUCCESS" : "FAILED");
 
     if (!caseData) {
-      console.log("[API CASE GET] Full case query returned null despite basic query success");
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
-    console.log("[API CASE GET] Case found:", caseData.id, "Status:", caseData.status);
     return NextResponse.json(caseData);
   } catch (error) {
-    console.error("[API CASE GET] Error fetching case:", error);
+    console.error("Error fetching case:", error);
     return NextResponse.json(
       { error: "Failed to fetch case", details: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 }

@@ -2,9 +2,6 @@ import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
 
-// Force dynamic rendering to ensure fresh data
-export const dynamic = "force-dynamic";
-
 // GET /api/cases - List user's cases
 export async function GET(request: Request) {
   try {
@@ -57,11 +54,8 @@ export async function GET(request: Request) {
 // POST /api/cases - Create a new case
 export async function POST(request: Request) {
   try {
-    console.log("[API CASES POST] Creating new case...");
     const user = await getDbUser();
-    console.log("[API CASES POST] User ID:", user?.id || "NO USER", "Email:", user?.email || "N/A");
     if (!user) {
-      console.log("[API CASES POST] Unauthorized - no user");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -218,7 +212,6 @@ export async function POST(request: Request) {
       },
     });
 
-    console.log("[API CASES POST] Case created successfully:", newCase.id, "for user:", newCase.userId);
     return NextResponse.json(newCase, { status: 201 });
   } catch (error: unknown) {
     console.error("Error creating case:", error);
