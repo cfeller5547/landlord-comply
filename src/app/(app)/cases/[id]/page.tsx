@@ -378,7 +378,7 @@ export default function CaseWorkspacePage() {
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || "Failed to generate PDF");
+        throw new Error((err.error && err.details ? `${err.error}: ${err.details}` : err.error) || "Failed to generate PDF");
       }
 
       const blob = await res.blob();

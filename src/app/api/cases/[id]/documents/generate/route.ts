@@ -234,7 +234,11 @@ export async function POST(
   } catch (error) {
     console.error("Error generating document:", error);
     return NextResponse.json(
-      { error: "Failed to generate document" },
+      { 
+        error: "Failed to generate document", 
+        details: error instanceof Error ? error.message : "Unknown error",
+        stack: process.env.NODE_ENV === "development" ? (error instanceof Error ? error.stack : undefined) : undefined
+      },
       { status: 500 }
     );
   }
