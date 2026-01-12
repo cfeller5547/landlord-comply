@@ -424,7 +424,7 @@ export default function CaseWorkspacePage() {
 
         if (!res.ok) {
           const err = await res.json();
-          throw new Error(err.error || "Failed to upload file");
+          throw new Error((err.error && err.details ? `${err.error}: ${err.details}` : err.error) || "Failed to upload file");
         }
       }
       await fetchCase();
@@ -610,9 +610,9 @@ export default function CaseWorkspacePage() {
       if (!res.ok) throw new Error("Failed to get template");
       const template = await res.json();
       await navigator.clipboard.writeText(`Subject: ${template.subject}\n\n${template.body}`);
-      alert("Email template copied to clipboard!");
+      toast.success("Email template copied to clipboard!");
     } catch (err) {
-      alert("Failed to copy template");
+      toast.error("Failed to copy template");
     }
   };
 
@@ -975,9 +975,20 @@ export default function CaseWorkspacePage() {
             </CardHeader>
             <CardContent>
               {caseData.deductions.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">
-                  No deductions added yet
-                </p>
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-4">No deductions added yet</p>
+                  {!isClosed && (
+                    <Button onClick={() => {
+                        const deductionSection = document.getElementById('deductions-section');
+                        // In a real implementation, this would open a dialog or scroll to the form
+                        // For now, we'll just alert as placeholder since the form isn't in the snippet
+                        alert("Use the form below to add a deduction (if implemented) or use the 'Add Deduction' button in the sidebar if available.");
+                    }}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add First Deduction
+                    </Button>
+                  )}
+                </div>
               ) : (
                 <div className="space-y-4">
                   {caseData.deductions.map((deduction) => (
@@ -1277,9 +1288,10 @@ export default function CaseWorkspacePage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() =>
-                              handleForwardingAddressUpdate(primaryTenant.id, "REQUESTED")
-                            }
+                            onClick={() => {
+                              handleForwardingAddressUpdate(primaryTenant.id, "REQUESTED");
+                              toast.success("Marked as requested");
+                            }}
                           >
                             <Mail className="h-3 w-3 mr-1" />
                             Mark Requested

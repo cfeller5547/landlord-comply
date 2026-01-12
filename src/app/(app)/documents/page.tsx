@@ -171,13 +171,17 @@ export default async function DocumentsPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button variant="ghost" size="sm">
-                            <ExternalLink className="mr-2 h-4 w-4" />
-                            View
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={`/api/documents/${doc.id}/view`} target="_blank" rel="noopener noreferrer">
+                              <ExternalLink className="mr-2 h-4 w-4" />
+                              View
+                            </a>
                           </Button>
-                          <Button variant="ghost" size="sm">
-                            <Download className="mr-2 h-4 w-4" />
-                            Download
+                          <Button variant="ghost" size="sm" asChild>
+                            <a href={`/api/documents/${doc.id}/download`} download>
+                              <Download className="mr-2 h-4 w-4" />
+                              Download
+                            </a>
                           </Button>
                         </div>
                       </TableCell>

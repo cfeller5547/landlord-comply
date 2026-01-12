@@ -122,7 +122,11 @@ export async function POST(
     if (uploadError) {
       console.error("Upload error:", uploadError);
       return NextResponse.json(
-        { error: "Failed to upload file. Make sure the storage bucket exists." },
+        { 
+          error: "Failed to upload file. Make sure the storage bucket exists.",
+          details: uploadError.message,
+          stack: process.env.NODE_ENV === "development" ? uploadError : undefined
+        },
         { status: 500 }
       );
     }
