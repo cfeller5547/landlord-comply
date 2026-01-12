@@ -26,8 +26,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { Plus, Search, Filter } from "lucide-react";
 
 async function getCases(userId: string) {
+  console.log("[CASES PAGE] getCases() called with userId:", userId);
   const db = requireDb();
-  if (!db) return [];
+  if (!db) {
+    console.log("[CASES PAGE] No database connection");
+    return [];
+  }
 
   const now = new Date();
 
@@ -50,6 +54,8 @@ async function getCases(userId: string) {
     orderBy: { dueDate: "asc" },
   });
 
+  console.log("[CASES PAGE] Found", cases.length, "cases for user");
+
   return cases.map((c) => {
     const daysLeft = Math.ceil(
       (c.dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
@@ -69,8 +75,14 @@ async function getCases(userId: string) {
 }
 
 export default async function CasesPage() {
+  console.log("[CASES PAGE] CasesPage() rendering...");
   const user = await getCurrentUser();
-  const cases = user ? await getCases(user.id).catch(() => []) : [];
+  console.log("[CASES PAGE] getCurrentUser() returned:", user?.id || "NO USER", "email:", user?.email || "N/A");
+  const cases = user ? await getCases(user.id).catch((err) => {
+    console.error("[CASES PAGE] getCases() error:", err);
+    return [];
+  }) : [];
+  console.log("[CASES PAGE] Final cases count:", cases.length);
 
   return (
     <div className="space-y-6">

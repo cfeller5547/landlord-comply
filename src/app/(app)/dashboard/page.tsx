@@ -18,8 +18,12 @@ import { getCurrentUser } from "@/lib/auth";
 import { Briefcase, Clock, AlertTriangle, Plus, FileDown } from "lucide-react";
 
 async function getDashboardData(userId: string) {
+  console.log("[DASHBOARD] getDashboardData() called with userId:", userId);
   const db = requireDb();
-  if (!db) return null;
+  if (!db) {
+    console.log("[DASHBOARD] No database connection");
+    return null;
+  }
 
   const now = new Date();
   const sevenDaysFromNow = new Date();

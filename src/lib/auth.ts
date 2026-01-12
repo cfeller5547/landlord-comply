@@ -9,13 +9,18 @@ export async function getCurrentUser() {
     data: { user },
   } = await supabase.auth.getUser();
 
+  console.log("[AUTH] getCurrentUser() called, user:", user?.id || "NO USER");
+
   return user;
 }
 
 export async function getDbUser() {
   const user = await getCurrentUser();
 
+  console.log("[AUTH] getDbUser() called, auth user:", user?.id || "NO USER");
+
   if (!user) {
+    console.log("[AUTH] getDbUser() returning null - no auth user");
     return null;
   }
 
