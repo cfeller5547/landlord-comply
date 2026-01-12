@@ -222,7 +222,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                     {content.subheadline}
                   </p>
                   <p className="mt-4 text-base text-muted-foreground">
-                    We're building the compliance tool landlords deserve. Join the beta to get{" "}
+                    We&apos;re building the compliance tool landlords deserve. Join the beta to get{" "}
                     <span className="text-success font-semibold">free unlimited access</span> and help us get it right.
                   </p>
                 </>
@@ -312,7 +312,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
 
               {/* What You Get Strip */}
               <div className="mt-6 rounded-lg border bg-muted/50 p-4">
-                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">What you'll get:</p>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">What you&apos;ll get:</p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   <div className="flex items-center gap-2 text-sm">
                     <FileText className="h-4 w-4 text-primary flex-shrink-0" />
@@ -529,7 +529,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                 </div>
                 <h3 className="mt-4 font-bold text-lg">2-3× penalty + fees</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Bad faith retention or missed deadlines can mean owing double or triple the deposit, plus the tenant's attorney fees.
+                  Bad faith retention or missed deadlines can mean owing double or triple the deposit, plus the tenant&apos;s attorney fees.
                 </p>
               </CardContent>
             </Card>
@@ -551,7 +551,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                 </div>
                 <h3 className="mt-4 font-bold text-lg">City overrides state</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  SF requires interest. Chicago has receipt rules. NYC caps deposits at 1 month. State law alone isn't enough.
+                  SF requires interest. Chicago has receipt rules. NYC caps deposits at 1 month. State law alone isn&apos;t enough.
                 </p>
               </CardContent>
             </Card>
@@ -732,7 +732,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
         <div className="mx-auto max-w-6xl px-4">
           <div className="mx-auto max-w-3xl text-center">
             <Badge variant="secondary" className="mb-4">Sample Output</Badge>
-            <h2 className="text-2xl sm:text-3xl font-bold">See exactly what you'll get</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold">See exactly what you&apos;ll get</h2>
             <p className="mt-4 text-muted-foreground">
               Real examples of the documents landlords use to prove compliance in court.
             </p>
@@ -1170,7 +1170,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
           <div className="mx-auto max-w-3xl text-center">
             <h2 className="text-2xl sm:text-3xl font-bold">How we maintain accuracy</h2>
             <p className="mt-4 text-muted-foreground">
-              Legal-adjacent tools require transparency. Here's how we earn your trust.
+              Legal-adjacent tools require transparency. Here&apos;s how we earn your trust.
             </p>
           </div>
 
@@ -1189,7 +1189,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                 <CalendarClock className="h-8 w-8 text-primary" />
                 <h3 className="mt-4 font-semibold">Version-controlled rules</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Each rule set has a version number and "last verified" date. When you generate a notice, the version is locked.
+                  Each rule set has a version number and &quot;last verified&quot; date. When you generate a notice, the version is locked.
                 </p>
               </CardContent>
             </Card>
@@ -1198,7 +1198,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                 <Shield className="h-8 w-8 text-primary" />
                 <h3 className="mt-4 font-semibold">Clear boundaries</h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  We explicitly state which jurisdictions are covered. No implied completeness. You always know what you're getting.
+                  We explicitly state which jurisdictions are covered. No implied completeness. You always know what you&apos;re getting.
                 </p>
               </CardContent>
             </Card>

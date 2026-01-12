@@ -316,9 +316,9 @@ export default function NewCasePage() {
       }
 
       router.push(`/cases/${newCase.id}`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Case creation error:", err);
-      setError(err.message || "Failed to create case. Please try again.");
+      setError(err instanceof Error ? err.message : "Failed to create case. Please try again.");
       setCreating(false);
     }
   };

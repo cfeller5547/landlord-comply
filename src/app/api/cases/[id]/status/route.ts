@@ -84,7 +84,7 @@ export async function PATCH(
     }
 
     // Prepare update data
-    const updateData: any = { status: newStatus };
+    const updateData: Record<string, unknown> = { status: newStatus };
 
     if (newStatus === "SENT") {
       if (!deliveryMethod) {

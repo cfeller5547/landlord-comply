@@ -101,6 +101,21 @@ import {
 } from "lucide-react";
 
 // Types
+interface Deduction {
+  id: string;
+  description: string;
+  category: string;
+  amount: number;
+  notes?: string;
+  attachmentIds: string[];
+  riskLevel?: string | null;
+  itemAge?: number | null;
+  damageType?: string | null;
+  hasEvidence: boolean;
+  aiGenerated: boolean;
+  originalDescription?: string;
+}
+
 interface CaseData {
   id: string;
   status: string;
@@ -171,20 +186,7 @@ interface CaseData {
       description?: string;
     }>;
   };
-  deductions: Array<{
-    id: string;
-    description: string;
-    category: string;
-    amount: number;
-    notes?: string;
-    attachmentIds: string[];
-    riskLevel?: string;
-    itemAge?: number;
-    damageType?: string;
-    hasEvidence: boolean;
-    aiGenerated: boolean;
-    originalDescription?: string;
-  }>;
+  deductions: Deduction[];
   documents: Array<{
     id: string;
     type: string;
@@ -242,8 +244,8 @@ interface QualityCheck {
     severity: string;
     details?: string;
   }>;
-  blockers: Array<any>;
-  warnings: Array<any>;
+  blockers: Array<{ id: string; label: string }>;
+  warnings: Array<{ id: string; label: string }>;
 }
 
 // Risk badge colors
@@ -283,7 +285,7 @@ export default function CaseWorkspacePage() {
   const [showAiDialog, setShowAiDialog] = useState(false);
   const [showForwardingDialog, setShowForwardingDialog] = useState(false);
   const [showExposureCard, setShowExposureCard] = useState(true);
-  const [selectedDeduction, setSelectedDeduction] = useState<any>(null);
+  const [selectedDeduction, setSelectedDeduction] = useState<Deduction | null>(null);
   const [aiImproving, setAiImproving] = useState(false);
   const [aiResult, setAiResult] = useState<{ description: string; reasoning: string } | null>(null);
   const [showDocGeneratedSurvey, setShowDocGeneratedSurvey] = useState(false);
@@ -605,7 +607,7 @@ export default function CaseWorkspacePage() {
   };
 
   // Update deduction risk info
-  const handleUpdateDeductionRisk = async (deductionId: string, updates: any) => {
+  const handleUpdateDeductionRisk = async (deductionId: string, updates: Partial<Deduction>) => {
     try {
       const res = await fetch(`/api/cases/${caseId}/deductions`, {
         method: "PATCH",

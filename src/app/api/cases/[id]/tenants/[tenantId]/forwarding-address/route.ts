@@ -37,7 +37,7 @@ export async function PATCH(
     }
 
     // Build update data
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (forwardingAddress !== undefined) {
       updateData.forwardingAddress = forwardingAddress;
@@ -75,8 +75,8 @@ export async function PATCH(
         userId: user.id,
         metadata: {
           tenantId,
-          status: updateData.forwardingAddressStatus,
-          requestMethod,
+          status: updateData.forwardingAddressStatus as string,
+          requestMethod: requestMethod || null,
         },
       },
     });

@@ -646,11 +646,11 @@ export function FlowCompleteConcierge({ caseId, userEmail }: FlowCompleteConcier
               <Star className="h-5 w-5 text-warning fill-warning" />
               <CardTitle className="text-sm pr-6">You completed a full deposit return flow!</CardTitle>
             </div>
-            <CardDescription className="text-xs">You're one of our most engaged beta testers</CardDescription>
+            <CardDescription className="text-xs">You&apos;re one of our most engaged beta testers</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm">
-              Would you be open to a <strong>quick 10-minute call</strong> to share your experience? We'd love to hear what worked and what didn't.
+              Would you be open to a <strong>quick 10-minute call</strong> to share your experience? We&apos;d love to hear what worked and what didn&apos;t.
             </p>
             <div className="flex gap-2">
               <Button

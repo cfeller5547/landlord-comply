@@ -128,12 +128,59 @@ export const californiaCitations = [
   },
 ];
 
+// Jurisdiction type that accepts both state-level (city: null) and city-level (city: string)
+type JurisdictionFixture = {
+  id: string;
+  state: string;
+  stateCode: string;
+  city: string | null;
+  coverageLevel: string;
+  isActive: boolean;
+  lastVerified: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+// Rule set type that accepts both interest and no-interest jurisdictions
+type RuleSetFixture = {
+  id: string;
+  jurisdictionId: string;
+  version: string;
+  effectiveDate: Date;
+  returnDeadlineDays: number;
+  interestRequired: boolean;
+  interestRate: number | null;
+  itemizationRequired: boolean;
+  maxDepositMonths: number;
+  allowedDeliveryMethods: string[];
+  lastVerified: Date;
+  createdAt: Date;
+  updatedAt: Date;
+};
+
+// Penalty and citation types
+type PenaltyFixture = {
+  id: string;
+  ruleSetId: string;
+  condition: string;
+  penalty: string;
+  description: string;
+};
+
+type CitationFixture = {
+  id: string;
+  ruleSetId: string;
+  code: string;
+  title: string;
+  url: string;
+};
+
 // Helper to create a jurisdiction with relations
 export function createJurisdictionWithRules(
-  jurisdiction: typeof californiaJurisdiction,
-  ruleSet: typeof californiaRuleSet,
-  penalties: typeof californiaPenalties = [],
-  citations: typeof californiaCitations = []
+  jurisdiction: JurisdictionFixture,
+  ruleSet: RuleSetFixture,
+  penalties: PenaltyFixture[] = [],
+  citations: CitationFixture[] = []
 ) {
   return {
     ...jurisdiction,

@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Test mocks intentionally use 'any' for flexibility in mocking database responses
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "@/app/api/jurisdictions/lookup/route";
 import { prismaMock } from "../../mocks/prisma";

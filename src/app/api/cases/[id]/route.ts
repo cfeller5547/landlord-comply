@@ -93,7 +93,7 @@ export async function PATCH(
       closedReason,
     } = body;
 
-    const updateData: any = {};
+    const updateData: Record<string, unknown> = {};
 
     if (depositAmount !== undefined) updateData.depositAmount = depositAmount;
     if (depositInterest !== undefined) updateData.depositInterest = depositInterest;
@@ -125,7 +125,7 @@ export async function PATCH(
         action: "case_updated",
         description: `Case updated: ${Object.keys(updateData).join(", ")}`,
         userId: user.id,
-        metadata: updateData,
+        metadata: updateData as Record<string, string | number | boolean | Date | null>,
       },
     });
 

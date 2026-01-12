@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   calculateDeadline,
   calculateDaysUntilDeadline,
@@ -218,9 +218,10 @@ describe("Interest Calculations", () => {
     });
 
     it("should return 0 when rate is null/undefined", () => {
+      // Test edge case where rate might be null from database
       const result = calculateInterest(
         2000,
-        null as any,
+        null as unknown as number,
         new Date("2023-01-01"),
         new Date("2024-01-01")
       );

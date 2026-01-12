@@ -1,3 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// Test mocks intentionally use 'any' for flexibility in mocking database responses
+
 import { PrismaClient } from "@prisma/client";
 import { mockDeep, mockReset, DeepMockProxy } from "vitest-mock-extended";
 import { beforeEach, vi } from "vitest";

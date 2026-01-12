@@ -19,7 +19,7 @@ export async function GET(request: Request) {
     const cases = await db.case.findMany({
       where: {
         userId: user.id,
-        ...(status && { status: status as any }),
+        ...(status && { status: status as "ACTIVE" | "PENDING_SEND" | "SENT" | "CLOSED" }),
       },
       include: {
         property: {
@@ -174,7 +174,7 @@ export async function POST(request: Request) {
         dueDate,
         status: "ACTIVE",
         tenants: {
-          create: tenants.map((t: any, index: number) => ({
+          create: tenants.map((t: { name: string; email?: string; phone?: string; forwardingAddress?: string }, index: number) => ({
             name: t.name,
             email: t.email,
             phone: t.phone,
@@ -217,16 +217,17 @@ export async function POST(request: Request) {
 
     console.log("[API CASES POST] Case created successfully:", newCase.id, "for user:", newCase.userId);
     return NextResponse.json(newCase, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error creating case:", error);
     // Return more specific error message for debugging
-    const errorMessage = error?.message || "Failed to create case";
-    const errorCode = error?.code || "UNKNOWN";
+    const err = error as { message?: string; code?: string; stack?: string };
+    const errorMessage = err?.message || "Failed to create case";
+    const errorCode = err?.code || "UNKNOWN";
     return NextResponse.json(
       {
         error: `Failed to create case: ${errorMessage}`,
         code: errorCode,
-        details: process.env.NODE_ENV === "development" ? error?.stack : undefined
+        details: process.env.NODE_ENV === "development" ? err?.stack : undefined
       },
       { status: 500 }
     );

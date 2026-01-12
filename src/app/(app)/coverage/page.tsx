@@ -122,7 +122,7 @@ export default async function CoveragePage() {
                   <div className="flex items-start justify-between">
                     <CardTitle className="text-lg">{state}</CardTitle>
                     {stateLevel && (
-                      <CoverageLevelBadge level={stateLevel.coverageLevel.toLowerCase() as any} />
+                      <CoverageLevelBadge level={stateLevel.coverageLevel.toLowerCase() as "full" | "partial" | "state_only"} />
                     )}
                   </div>
                   {stateLevel?.ruleSets[0]?.verifiedAt && (
@@ -146,7 +146,7 @@ export default async function CoveragePage() {
                             <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="text-sm">{city.city}</span>
                           </div>
-                          <CoverageLevelBadge level={city.coverageLevel.toLowerCase() as any} compact />
+                          <CoverageLevelBadge level={city.coverageLevel.toLowerCase() as "full" | "partial" | "state_only"} compact />
                         </div>
                       ))}
                     </div>
