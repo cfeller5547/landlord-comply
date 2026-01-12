@@ -1,0 +1,458 @@
+// LandlordComply Database Schema
+// Prisma schema for security deposit compliance management
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  avatarUrl     String?
+
+  // Subscription
+  plan          Plan      @default(FREE)
+  stripeCustomerId String?
+  subscriptionEndsAt DateTime?
+
+  // Preferences
+  reminderEnabled Boolean @default(true)
+  reminderDays    Int[]   @default([7, 3, 1])
+
+  // Relations
+  properties    Property[]
+  cases         Case[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@map("users")
+}
+
+enum Plan {
+  FREE
+  SINGLE_PACKET
+  PRO
+}
+
+// ============================================
+// PROPERTY & JURISDICTION
+// ============================================
+
+model Property {
+  id              String    @id @default(cuid())
+
+  // Address
+  address         String
+  unit            String?
+  city            String
+  state           String
+  zipCode         String
+
+  // Resolved jurisdiction
+  jurisdictionId  String
+  jurisdiction    Jurisdiction @relation(fields: [jurisdictionId], references: [id])
+
+  // Owner
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  cases           Case[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("properties")
+}
+
+model Jurisdiction {
+  id              String    @id @default(cuid())
+
+  // Location
+  state           String
+  stateCode       String    // e.g., "CA"
+  city            String?   // null = state-level only
+  county          String?
+
+  // Coverage status
+  coverageLevel   CoverageLevel @default(STATE_ONLY)
+  isActive        Boolean   @default(true)
+
+  // Relations
+  properties      Property[]
+  ruleSets        RuleSet[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@unique([stateCode, city])
+  @@map("jurisdictions")
+}
+
+enum CoverageLevel {
+  FULL          // City + state rules verified
+  PARTIAL       // State rules + some city rules
+  STATE_ONLY    // Only state-level rules
+}
+
+// ============================================
+// RULES ENGINE
+// ============================================
+
+model RuleSet {
+  id              String    @id @default(cuid())
+
+  // Versioning
+  version         String    // e.g., "2026.1"
+  effectiveDate   DateTime
+  verifiedAt      DateTime  @default(now())
+
+  // Jurisdiction
+  jurisdictionId  String
+  jurisdiction    Jurisdiction @relation(fields: [jurisdictionId], references: [id])
+
+  // Deposit Rules (denormalized for query performance)
+  returnDeadlineDays        Int
+  returnDeadlineDescription String?
+
+  interestRequired          Boolean   @default(false)
+  interestRate              Decimal?  @db.Decimal(5, 4)
+  interestRateSource        String?
+  interestCalculationMethod String?
+
+  receiptRequirementThreshold Decimal? @db.Decimal(10, 2)
+  itemizationRequired       Boolean   @default(true)
+  itemizationRequirements   String?
+
+  maxDepositMonths          Int?
+  allowedDeliveryMethods    String[]  @default(["mail", "hand_delivery"])
+
+  // Relations
+  penalties       Penalty[]
+  citations       Citation[]
+  cases           Case[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("rule_sets")
+}
+
+model Penalty {
+  id              String    @id @default(cuid())
+
+  ruleSetId       String
+  ruleSet         RuleSet   @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+
+  condition       String    // e.g., "Bad faith retention"
+  penalty         String    // e.g., "2x deposit amount"
+  description     String?
+
+  @@map("penalties")
+}
+
+model Citation {
+  id              String    @id @default(cuid())
+
+  ruleSetId       String
+  ruleSet         RuleSet   @relation(fields: [ruleSetId], references: [id], onDelete: Cascade)
+
+  code            String    // e.g., "Cal. Civ. Code § 1950.5"
+  title           String?   // e.g., "Security deposits"
+  url             String?   // Link to official source
+  excerpt         String?   // Relevant text excerpt
+
+  @@map("citations")
+}
+
+// ============================================
+// CASE MANAGEMENT
+// ============================================
+
+model Case {
+  id              String    @id @default(cuid())
+
+  // Property & Owner
+  propertyId      String
+  property        Property  @relation(fields: [propertyId], references: [id])
+  userId          String
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Rules snapshot (locked at case creation)
+  ruleSetId       String
+  ruleSet         RuleSet   @relation(fields: [ruleSetId], references: [id])
+
+  // Lease & Move-out
+  leaseStartDate  DateTime
+  leaseEndDate    DateTime
+  moveOutDate     DateTime
+
+  // Deposit
+  depositAmount   Decimal   @db.Decimal(10, 2)
+  depositInterest Decimal   @default(0) @db.Decimal(10, 2)
+
+  // Calculated deadline
+  dueDate         DateTime
+
+  // Delivery
+  deliveryMethod  String?
+  sentDate        DateTime?
+  trackingNumber  String?
+  deliveryAddress String?         // Address notice was sent to
+  deliveryProofIds String[]       // Attachment IDs for delivery proof (receipts, etc.)
+
+  // Status
+  status          CaseStatus @default(ACTIVE)
+  closedAt        DateTime?
+  closedReason    String?
+
+  // Relations
+  tenants         Tenant[]
+  deductions      Deduction[]
+  documents       Document[]
+  attachments     Attachment[]
+  auditEvents     AuditEvent[]
+  checklistItems  ChecklistItem[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("cases")
+}
+
+enum CaseStatus {
+  ACTIVE          // In progress
+  PENDING_SEND    // Ready to send
+  SENT            // Delivered
+  CLOSED          // Complete
+}
+
+model Tenant {
+  id              String    @id @default(cuid())
+
+  caseId          String
+  case            Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  name            String
+  email           String?
+  phone           String?
+  forwardingAddress String?
+
+  // Forwarding address tracking
+  forwardingAddressStatus     ForwardingAddressStatus @default(NOT_REQUESTED)
+  forwardingAddressRequestedAt DateTime?
+  forwardingAddressRequestMethod String? // email, letter, in_person
+
+  isPrimary       Boolean   @default(false)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("tenants")
+}
+
+enum ForwardingAddressStatus {
+  NOT_REQUESTED     // Haven't asked yet
+  REQUESTED         // Asked but no response
+  PROVIDED          // Tenant provided address
+  REFUSED           // Tenant refused to provide
+  NOT_APPLICABLE    // e.g., tenant still at property
+}
+
+model Deduction {
+  id              String    @id @default(cuid())
+
+  caseId          String
+  case            Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  description     String
+  category        DeductionCategory
+  amount          Decimal   @db.Decimal(10, 2)
+  notes           String?
+
+  // Risk assessment
+  riskLevel       DeductionRiskLevel?
+  itemAge         Int?              // Age of item in months
+  damageType      DamageType?
+  hasEvidence     Boolean           @default(false)
+
+  // AI enhancement tracking
+  aiGenerated     Boolean           @default(false)
+  originalDescription String?       // Original before AI improvement
+
+  // Linked evidence
+  attachmentIds   String[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("deductions")
+}
+
+enum DeductionRiskLevel {
+  LOW           // Strong evidence, clearly beyond wear
+  MEDIUM        // Some ambiguity or missing documentation
+  HIGH          // Likely wear/tear or weak evidence
+}
+
+enum DamageType {
+  NORMAL_WEAR       // Expected wear and tear
+  BEYOND_NORMAL     // Damage beyond normal use
+  INTENTIONAL       // Deliberate damage
+  NEGLIGENCE        // Failure to maintain
+}
+
+enum DeductionCategory {
+  CLEANING
+  REPAIRS
+  UNPAID_RENT
+  UTILITIES
+  DAMAGES
+  OTHER
+}
+
+// ============================================
+// DOCUMENTS & ATTACHMENTS
+// ============================================
+
+model Document {
+  id              String    @id @default(cuid())
+
+  caseId          String
+  case            Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  type            DocumentType
+  version         Int       @default(1)
+
+  // Storage
+  fileUrl         String?
+  fileName        String?
+  fileSize        Int?
+
+  // Generation metadata
+  generatedAt     DateTime  @default(now())
+  generatedBy     String?   // User ID or "system"
+
+  @@map("documents")
+}
+
+enum DocumentType {
+  NOTICE_LETTER
+  ITEMIZED_STATEMENT
+  PROOF_PACKET
+  RULE_SNAPSHOT
+}
+
+model Attachment {
+  id              String    @id @default(cuid())
+
+  caseId          String
+  case            Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  name            String
+  type            AttachmentType
+
+  // Storage
+  fileUrl         String
+  fileName        String
+  fileSize        Int?
+  mimeType        String?
+
+  // Organization
+  tags            String[]
+  description     String?
+
+  uploadedAt      DateTime  @default(now())
+
+  @@map("attachments")
+}
+
+enum AttachmentType {
+  PHOTO
+  RECEIPT
+  INVOICE
+  CONTRACT
+  DELIVERY_PROOF    // USPS receipt, certified mail slip, email screenshot
+  OTHER
+}
+
+// ============================================
+// AUDIT & CHECKLIST
+// ============================================
+
+model AuditEvent {
+  id              String    @id @default(cuid())
+
+  caseId          String
+  case            Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  action          String    // e.g., "case_created", "document_generated"
+  description     String
+
+  userId          String?
+  metadata        Json?     // Additional context
+
+  timestamp       DateTime  @default(now())
+
+  @@map("audit_events")
+}
+
+model ChecklistItem {
+  id              String    @id @default(cuid())
+
+  caseId          String
+  case            Case      @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  label           String
+  description     String?
+
+  required        Boolean   @default(true)
+  blocksExport    Boolean   @default(false)
+
+  completed       Boolean   @default(false)
+  completedAt     DateTime?
+  completedBy     String?
+
+  sortOrder       Int       @default(0)
+
+  @@map("checklist_items")
+}
+
+// ============================================
+// REMINDERS
+// ============================================
+
+model Reminder {
+  id              String    @id @default(cuid())
+
+  caseId          String
+  userId          String
+
+  type            ReminderType
+  scheduledFor    DateTime
+
+  sent            Boolean   @default(false)
+  sentAt          DateTime?
+
+  createdAt       DateTime  @default(now())
+
+  @@index([scheduledFor, sent])
+  @@map("reminders")
+}
+
+enum ReminderType {
+  DEADLINE_7_DAYS
+  DEADLINE_3_DAYS
+  DEADLINE_1_DAY
+  DEADLINE_OVERDUE
+}
