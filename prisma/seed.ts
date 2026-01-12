@@ -17,23 +17,25 @@ const prisma = new PrismaClient({ adapter });
 // Sources: Official state statutes and city ordinances
 const jurisdictionData = [
   // California (state-level)
+  // Updated for AB 12 (effective July 1, 2024) and AB 2801 (effective Jan 1, 2025)
   {
     state: "California",
     stateCode: "CA",
     city: null,
     coverageLevel: "STATE_ONLY" as const,
     rules: {
-      version: "2026.1",
+      version: "2025.1",
       returnDeadlineDays: 21,
       returnDeadlineDescription: "21 days from move-out, or 21 days from tenant providing forwarding address, whichever is later",
       interestRequired: false,
       itemizationRequired: true,
-      itemizationRequirements: "Itemized statement required for any deductions. Must include copies of receipts for repairs over $125.",
-      maxDepositMonths: 2,
+      itemizationRequirements: "Itemized statement required for any deductions. Must include copies of receipts for repairs over $125. As of April 1, 2025, landlords must provide dated photos of unit condition after tenant vacates.",
+      maxDepositMonths: 1, // Changed from 2 to 1 per AB 12 (July 1, 2024). Exception: Small landlords (≤2 properties, ≤4 units) may charge up to 2 months.
       receiptRequirementThreshold: 125,
       allowedDeliveryMethods: ["mail", "hand_delivery", "email"],
       citations: [
         { code: "Cal. Civ. Code § 1950.5", title: "Security deposits", url: "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?sectionNum=1950.5.&lawCode=CIV" },
+        { code: "AB 12 (2023)", title: "Security deposit limit reduction", url: "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB12" },
       ],
       penalties: [
         { condition: "Bad faith retention", penalty: "Up to 2x deposit amount", description: "If landlord retains deposit in bad faith, tenant may recover up to twice the deposit amount." },
@@ -41,31 +43,33 @@ const jurisdictionData = [
     },
   },
   // California - San Francisco
+  // Interest rate updated annually by SF Rent Board (March 1 each year)
   {
     state: "California",
     stateCode: "CA",
     city: "San Francisco",
     coverageLevel: "FULL" as const,
     rules: {
-      version: "2026.1",
+      version: "2025.1",
       returnDeadlineDays: 21,
       returnDeadlineDescription: "21 days from move-out",
       interestRequired: true,
-      interestRate: 0.001, // 0.1% - city sets rate annually
-      interestRateSource: "San Francisco Rent Board annual rate",
-      interestCalculationMethod: "Simple interest, paid annually or at termination",
+      interestRate: 0.05, // 5.0% for March 1, 2025 - Feb 28, 2026 (was 5.2% for 2024-2025)
+      interestRateSource: "San Francisco Rent Board annual rate based on 90-Day AA Financial Commercial Paper Rate",
+      interestCalculationMethod: "Simple interest, paid annually on anniversary of deposit receipt, or at termination. Interest not due if tenancy < 1 year.",
       itemizationRequired: true,
-      itemizationRequirements: "Itemized statement required. Receipts required for repairs over $125.",
-      maxDepositMonths: 2,
+      itemizationRequirements: "Itemized statement required. Receipts required for repairs over $125. Photos required per state law as of April 1, 2025.",
+      maxDepositMonths: 1, // Changed from 2 to 1 per AB 12 (July 1, 2024)
       receiptRequirementThreshold: 125,
       allowedDeliveryMethods: ["mail", "hand_delivery", "email"],
       citations: [
         { code: "Cal. Civ. Code § 1950.5", title: "Security deposits", url: "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?sectionNum=1950.5.&lawCode=CIV" },
-        { code: "SF Admin. Code § 49.2", title: "Security deposit interest", url: "https://sfgov.org/rentboard" },
+        { code: "SF Admin. Code Ch. 49", title: "Security deposit interest", url: "https://www.sf.gov/reports--security-deposits" },
+        { code: "AB 12 (2023)", title: "Security deposit limit reduction", url: "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB12" },
       ],
       penalties: [
         { condition: "Bad faith retention", penalty: "Up to 2x deposit amount", description: "If landlord retains deposit in bad faith, tenant may recover up to twice the deposit amount." },
-        { condition: "Failure to pay interest", penalty: "Interest plus penalties", description: "Landlord must pay interest at the rate set by the Rent Board." },
+        { condition: "Failure to pay interest", penalty: "Interest plus penalties", description: "Landlord must pay interest at the rate set by the Rent Board annually." },
       ],
     },
   },
@@ -76,18 +80,19 @@ const jurisdictionData = [
     city: "Los Angeles",
     coverageLevel: "FULL" as const,
     rules: {
-      version: "2026.1",
+      version: "2025.1",
       returnDeadlineDays: 21,
       returnDeadlineDescription: "21 days from move-out",
       interestRequired: false,
       itemizationRequired: true,
-      itemizationRequirements: "Itemized statement required. Receipts required for repairs over $125.",
-      maxDepositMonths: 2,
+      itemizationRequirements: "Itemized statement required. Receipts required for repairs over $125. Photos required as of April 1, 2025.",
+      maxDepositMonths: 1, // Changed from 2 to 1 per AB 12 (July 1, 2024)
       receiptRequirementThreshold: 125,
       allowedDeliveryMethods: ["mail", "hand_delivery", "email"],
       citations: [
         { code: "Cal. Civ. Code § 1950.5", title: "Security deposits", url: "https://leginfo.legislature.ca.gov/faces/codes_displaySection.xhtml?sectionNum=1950.5.&lawCode=CIV" },
         { code: "LAMC § 151.06", title: "LA Rent Stabilization", url: "https://housing.lacity.org/" },
+        { code: "AB 12 (2023)", title: "Security deposit limit reduction", url: "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB12" },
       ],
       penalties: [
         { condition: "Bad faith retention", penalty: "Up to 2x deposit amount", description: "If landlord retains deposit in bad faith, tenant may recover up to twice the deposit amount." },
@@ -337,6 +342,21 @@ const jurisdictionData = [
 
 async function main() {
   console.log("Starting seed...");
+
+  // Clean up old data first
+  console.log("Cleaning up old data...");
+
+  // First delete cases that reference old rule sets
+  const casesDeleted = await prisma.case.deleteMany({
+    where: { ruleSet: { version: { startsWith: "2026" } } }
+  });
+  console.log(`Deleted ${casesDeleted.count} cases referencing old rules`);
+
+  // Then delete old rule sets
+  const ruleSetsDeleted = await prisma.ruleSet.deleteMany({
+    where: { version: { startsWith: "2026" } }
+  });
+  console.log(`Deleted ${ruleSetsDeleted.count} old rule sets`);
 
   for (const data of jurisdictionData) {
     console.log(`Seeding: ${data.city || data.state} (${data.stateCode})`);

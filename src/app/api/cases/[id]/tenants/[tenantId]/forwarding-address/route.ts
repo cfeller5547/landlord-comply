@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getDbUser } from "@/lib/auth";
 
 // PATCH /api/cases/[id]/tenants/[tenantId]/forwarding-address - Update forwarding address status
 export async function PATCH(
@@ -8,7 +8,7 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string; tenantId: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
+    const user = await getDbUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -97,7 +97,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; tenantId: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
+    const user = await getDbUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

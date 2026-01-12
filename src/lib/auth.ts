@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { config } from "@/lib/config";
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -18,6 +19,10 @@ export async function getDbUser() {
     return null;
   }
 
+  // Determine default plan based on app stage
+  // During beta, new users get BETA plan (free Pro access)
+  const defaultPlan = config.stage === "beta" ? "BETA" : "FREE";
+
   // If database is not configured, return a minimal user object
   if (!db) {
     return {
@@ -25,7 +30,7 @@ export async function getDbUser() {
       email: user.email!,
       name: user.user_metadata?.name || user.email?.split("@")[0],
       avatarUrl: user.user_metadata?.avatar_url,
-      plan: "FREE" as const,
+      plan: defaultPlan as const,
       reminderEnabled: true,
       reminderDays: [7, 3, 1],
       createdAt: new Date(),
@@ -42,12 +47,14 @@ export async function getDbUser() {
 
   if (!dbUser) {
     // Create user in our database if doesn't exist
+    // Set BETA plan during beta period for free Pro access
     dbUser = await db.user.create({
       data: {
         id: user.id,
         email: user.email!,
         name: user.user_metadata?.name || user.email?.split("@")[0],
         avatarUrl: user.user_metadata?.avatar_url,
+        plan: defaultPlan,
       },
     });
   }

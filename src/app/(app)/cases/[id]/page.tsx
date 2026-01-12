@@ -58,6 +58,13 @@ import {
   StatusBadge,
   TrustBanner,
 } from "@/components/domain";
+import {
+  CaseCreatedSurvey,
+  FirstPacketSurvey,
+  DeliveryCompleteSurvey,
+  PricingSignalSurvey,
+  FlowCompleteConcierge,
+} from "@/components/feedback";
 import { cn } from "@/lib/utils";
 import {
   ArrowLeft,
@@ -89,6 +96,7 @@ import {
   Check,
   Info,
   Calculator,
+  ArrowRight,
 } from "lucide-react";
 
 // Types
@@ -276,6 +284,9 @@ export default function CaseWorkspacePage() {
   const [showExposureCard, setShowExposureCard] = useState(true);
   const [selectedDeduction, setSelectedDeduction] = useState<any>(null);
   const [aiImproving, setAiImproving] = useState(false);
+  const [aiResult, setAiResult] = useState<{ description: string; reasoning: string } | null>(null);
+  const [showDocGeneratedSurvey, setShowDocGeneratedSurvey] = useState(false);
+  const [showDeliverySurvey, setShowDeliverySurvey] = useState(false);
 
   // Form state for Mark as Sent
   const [sendForm, setSendForm] = useState({
@@ -369,6 +380,9 @@ export default function CaseWorkspacePage() {
 
       await fetchCase();
       await fetchQualityCheck();
+
+      // Trigger document generated survey
+      setShowDocGeneratedSurvey(true);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to generate PDF");
     } finally {
@@ -456,6 +470,9 @@ export default function CaseWorkspacePage() {
       setShowSendDialog(false);
       await fetchCase();
       await fetchQualityCheck();
+
+      // Trigger delivery complete survey
+      setShowDeliverySurvey(true);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to mark as sent");
     }
@@ -485,7 +502,7 @@ export default function CaseWorkspacePage() {
     }
   };
 
-  // AI improve deduction
+  // AI improve deduction - generate suggestion
   const handleAiImprove = async () => {
     if (!selectedDeduction) return;
 
@@ -503,15 +520,53 @@ export default function CaseWorkspacePage() {
       }
 
       const result = await res.json();
-      alert(`Description improved!\n\nReasoning: ${result.reasoning}`);
-      setShowAiDialog(false);
-      setAiForm({ whatHappened: "", whereLocated: "", whyBeyondWear: "", invoiceInfo: "" });
-      await fetchCase();
+      // Store result for review instead of auto-applying
+      setAiResult(result);
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Failed to improve description");
+      toast.error(err instanceof Error ? err.message : "Failed to improve description");
     } finally {
       setAiImproving(false);
     }
+  };
+
+  // Accept AI suggestion and update deduction
+  const handleAcceptAiSuggestion = async () => {
+    if (!selectedDeduction || !aiResult) return;
+
+    try {
+      const res = await fetch(`/api/cases/${caseId}/deductions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedDeduction.id,
+          description: aiResult.description,
+          aiGenerated: true,
+          originalDescription: selectedDeduction.originalDescription || selectedDeduction.description,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to update deduction");
+
+      toast.success("Description updated successfully");
+      setShowAiDialog(false);
+      setAiResult(null);
+      setAiForm({ whatHappened: "", whereLocated: "", whyBeyondWear: "", invoiceInfo: "" });
+      await fetchCase();
+    } catch (err) {
+      toast.error("Failed to apply improved description");
+    }
+  };
+
+  // Reject AI suggestion and go back to input form
+  const handleRejectAiSuggestion = () => {
+    setAiResult(null);
+  };
+
+  // Close AI dialog and reset state
+  const handleCloseAiDialog = () => {
+    setShowAiDialog(false);
+    setAiResult(null);
+    setAiForm({ whatHappened: "", whereLocated: "", whyBeyondWear: "", invoiceInfo: "" });
   };
 
   // Update forwarding address status
@@ -980,21 +1035,29 @@ export default function CaseWorkspacePage() {
                             )}
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end gap-2">
                           <span className="font-bold text-lg">
                             ${Number(deduction.amount).toFixed(2)}
                           </span>
-                          {!isClosed && (
+                          {!isClosed && !deduction.aiGenerated && (
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
+                              className="text-xs border-primary/30 text-primary hover:bg-primary/5 hover:text-primary"
                               onClick={() => {
                                 setSelectedDeduction(deduction);
                                 setShowAiDialog(true);
                               }}
                             >
-                              <Sparkles className="h-4 w-4" />
+                              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                              Improve with AI
                             </Button>
+                          )}
+                          {deduction.aiGenerated && (
+                            <span className="inline-flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">
+                              <Sparkles className="h-3 w-3" />
+                              AI-improved
+                            </span>
                           )}
                         </div>
                       </div>
@@ -1490,19 +1553,21 @@ export default function CaseWorkspacePage() {
       </div>
 
       {/* AI Improve Dialog */}
-      <Dialog open={showAiDialog} onOpenChange={setShowAiDialog}>
-        <DialogContent className="sm:max-w-lg">
+      <Dialog open={showAiDialog} onOpenChange={handleCloseAiDialog}>
+        <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              Improve Description with AI
+              {aiResult ? "Review AI Suggestion" : "Improve Description with AI"}
             </DialogTitle>
             <DialogDescription>
-              Write deductions that hold up in court. Provide context for better results.
+              {aiResult
+                ? "Review the AI-generated description below. Accept to use it, or try again with different context."
+                : "Write deductions that hold up in court. Provide context for better results."}
             </DialogDescription>
           </DialogHeader>
 
-          {selectedDeduction && (
+          {selectedDeduction && !aiResult && (
             <div className="space-y-4 py-4">
               <div className="p-3 bg-muted rounded-lg">
                 <p className="text-sm font-medium">Current Description:</p>
@@ -1549,21 +1614,86 @@ export default function CaseWorkspacePage() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAiDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleAiImprove} disabled={aiImproving}>
-              {aiImproving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Sparkles className="h-4 w-4 mr-2" />
-              )}
-              Improve Description
-            </Button>
+          {/* AI Result Review Phase */}
+          {selectedDeduction && aiResult && (
+            <div className="space-y-4 py-4">
+              {/* Original Description */}
+              <div className="p-4 bg-muted/50 rounded-lg border border-muted">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Original</p>
+                <p className="text-sm">{selectedDeduction.description}</p>
+              </div>
+
+              {/* Arrow indicator */}
+              <div className="flex justify-center">
+                <ArrowRight className="h-5 w-5 text-muted-foreground rotate-90" />
+              </div>
+
+              {/* AI Improved Description */}
+              <div className="p-4 bg-primary/5 rounded-lg border-2 border-primary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <p className="text-xs font-medium text-primary uppercase tracking-wide">AI-Improved</p>
+                </div>
+                <p className="text-sm font-medium">{aiResult.description}</p>
+              </div>
+
+              {/* AI Reasoning */}
+              <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
+                <p className="text-xs font-medium text-amber-800 uppercase tracking-wide mb-1">Why this is better</p>
+                <p className="text-sm text-amber-900">{aiResult.reasoning}</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            {!aiResult ? (
+              <>
+                <Button variant="outline" onClick={handleCloseAiDialog}>
+                  Cancel
+                </Button>
+                <Button onClick={handleAiImprove} disabled={aiImproving}>
+                  {aiImproving ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4 mr-2" />
+                  )}
+                  Generate Suggestion
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="outline" onClick={handleRejectAiSuggestion}>
+                  Try Again
+                </Button>
+                <Button onClick={handleAcceptAiSuggestion} className="bg-green-600 hover:bg-green-700">
+                  <Check className="h-4 w-4 mr-2" />
+                  Use This Description
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Beta Feedback Micro-surveys */}
+      {/* Show case created survey on first visit */}
+      <CaseCreatedSurvey caseId={caseData.id} />
+
+      {/* Show confidence survey after document generation */}
+      {showDocGeneratedSurvey && <FirstPacketSurvey caseId={caseData.id} />}
+
+      {/* Show confidence survey after marking delivery complete */}
+      {showDeliverySurvey && <DeliveryCompleteSurvey caseId={caseData.id} />}
+
+      {/* Show pricing signal survey when case has documents (for export) */}
+      {caseData.documents.length > 0 && caseData.status === "SENT" && (
+        <PricingSignalSurvey caseId={caseData.id} />
+      )}
+
+      {/* Show concierge follow-up when full flow is complete (closed + sent + has documents) */}
+      {isClosed && caseData.deliveryMethod && caseData.documents.length > 0 && (
+        <FlowCompleteConcierge caseId={caseData.id} />
+      )}
     </div>
   );
 }

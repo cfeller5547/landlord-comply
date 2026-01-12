@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getDbUser } from "@/lib/auth";
 
 // GET /api/cases - List user's cases
 export async function GET(request: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getDbUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -54,7 +54,7 @@ export async function GET(request: Request) {
 // POST /api/cases - Create a new case
 export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getDbUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -107,6 +107,20 @@ export async function POST(request: Request) {
     const dueDate = new Date(moveOut);
     dueDate.setDate(dueDate.getDate() + ruleSet.returnDeadlineDays);
 
+    // Calculate deposit interest if required by jurisdiction
+    let depositInterest = 0;
+    if (ruleSet.interestRequired && ruleSet.interestRate) {
+      const leaseStart = new Date(leaseStartDate);
+      const leaseEnd = new Date(leaseEndDate);
+      // Calculate lease duration in years (fractional)
+      const leaseDurationMs = leaseEnd.getTime() - leaseStart.getTime();
+      const leaseDurationYears = leaseDurationMs / (1000 * 60 * 60 * 24 * 365);
+      // Interest = deposit * rate * years
+      depositInterest = Number(depositAmount) * Number(ruleSet.interestRate) * leaseDurationYears;
+      // Round to 2 decimal places
+      depositInterest = Math.round(depositInterest * 100) / 100;
+    }
+
     // Create the case with tenants
     const newCase = await db.case.create({
       data: {
@@ -117,6 +131,7 @@ export async function POST(request: Request) {
         leaseEndDate: new Date(leaseEndDate),
         moveOutDate: moveOut,
         depositAmount,
+        depositInterest,
         dueDate,
         status: "ACTIVE",
         tenants: {

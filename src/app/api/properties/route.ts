@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getDbUser } from "@/lib/auth";
 
 // GET /api/properties - List user's properties
 export async function GET() {
   try {
-    const user = await getCurrentUser();
+    const user = await getDbUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -36,7 +36,7 @@ export async function GET() {
 // POST /api/properties - Create a new property
 export async function POST(request: Request) {
   try {
-    const user = await getCurrentUser();
+    const user = await getDbUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

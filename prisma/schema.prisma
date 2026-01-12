@@ -40,6 +40,7 @@ model User {
 
 enum Plan {
   FREE
+  BETA          // Free access during beta period
   SINGLE_PACKET
   PRO
 }
@@ -455,4 +456,68 @@ enum ReminderType {
   DEADLINE_3_DAYS
   DEADLINE_1_DAY
   DEADLINE_OVERDUE
+}
+
+// ============================================
+// BETA FEEDBACK
+// ============================================
+
+model Feedback {
+  id              String    @id @default(cuid())
+
+  // User (optional - can be anonymous)
+  userId          String?
+  userEmail       String?
+
+  // Feedback content
+  type            FeedbackType
+  category        FeedbackCategory?
+  message         String
+  rating          Int?      // 1-5 scale for satisfaction surveys
+
+  // Context
+  pageUrl         String?   // Where feedback was submitted from
+  trigger         String?   // What triggered the feedback (button, survey, etc.)
+  caseId          String?   // If related to a specific case
+
+  // Metadata
+  userAgent       String?
+  metadata        Json?     // Additional context
+
+  // Status
+  status          FeedbackStatus @default(NEW)
+  respondedAt     DateTime?
+  response        String?   // Admin response if any
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("feedback")
+}
+
+enum FeedbackType {
+  BUG             // Something is broken
+  FEATURE         // Feature request
+  IMPROVEMENT     // Suggestion for existing feature
+  PRAISE          // Positive feedback
+  GENERAL         // General comment
+  SURVEY          // Response to micro-survey
+}
+
+enum FeedbackCategory {
+  UI_UX           // User interface/experience
+  ACCURACY        // Data accuracy concerns
+  PERFORMANCE     // Speed/performance issues
+  JURISDICTION    // Jurisdiction coverage
+  DOCUMENTS       // Document generation
+  WORKFLOW        // Workflow/process issues
+  OTHER           // Other category
+}
+
+enum FeedbackStatus {
+  NEW             // Just submitted
+  REVIEWED        // Admin has seen it
+  IN_PROGRESS     // Being worked on
+  RESOLVED        // Issue resolved
+  WONT_FIX        // Won't be addressed
 }

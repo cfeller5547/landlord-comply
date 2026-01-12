@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { renderToBuffer } from "@react-pdf/renderer";
 import { requireDb } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth";
+import { getDbUser } from "@/lib/auth";
 import { NoticeLetterPDF } from "@/lib/pdf/notice-letter";
 import { ItemizedStatementPDF } from "@/lib/pdf/itemized-statement";
 import { createClient } from "@/lib/supabase/server";
@@ -20,7 +20,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getCurrentUser();
+    const user = await getDbUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }

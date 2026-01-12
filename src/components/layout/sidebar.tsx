@@ -11,11 +11,14 @@ import {
   Settings,
   Plus,
   Menu,
+  FlaskConical,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
 import { UserMenu } from "./user-menu";
+import { config } from "@/lib/config";
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -34,6 +37,7 @@ interface UserData {
 
 function NavContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const isBeta = config.features.showBetaBadge;
 
   return (
     <div className="flex h-full flex-col">
@@ -44,6 +48,12 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
             <span className="text-sm font-bold text-primary-foreground">LC</span>
           </div>
           <span className="font-semibold text-foreground">LandlordComply</span>
+          {isBeta && (
+            <Badge variant="secondary" className="ml-1 text-[10px] bg-primary/10 text-primary border-primary/20 gap-1">
+              <FlaskConical className="h-3 w-3" />
+              BETA
+            </Badge>
+          )}
         </Link>
       </div>
 
@@ -117,6 +127,8 @@ export function MobileNav() {
 }
 
 export function TopBar({ user }: { user: UserData | null }) {
+  const isBeta = config.features.showBetaBadge;
+
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-4 lg:px-6">
       <div className="flex items-center gap-4">
@@ -127,6 +139,12 @@ export function TopBar({ user }: { user: UserData | null }) {
             <span className="text-sm font-bold text-primary-foreground">LC</span>
           </div>
           <span className="font-semibold text-foreground">LandlordComply</span>
+          {isBeta && (
+            <Badge variant="secondary" className="ml-1 text-[10px] bg-primary/10 text-primary border-primary/20 gap-1">
+              <FlaskConical className="h-3 w-3" />
+              BETA
+            </Badge>
+          )}
         </Link>
       </div>
 

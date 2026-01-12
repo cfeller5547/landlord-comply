@@ -37,7 +37,7 @@ export async function improveDeductionDescription(
     throw new Error("AI features are not available - GOOGLE_AI_API_KEY not configured");
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const prompt = `You are a legal writing assistant helping landlords write clear, specific, factual descriptions for security deposit deductions. Your goal is to help create descriptions that would hold up in small claims court.
 
@@ -107,7 +107,7 @@ export async function assessDeductionRisk(
     return assessDeductionRiskRuleBased(context);
   }
 
-  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
   const prompt = `You are analyzing a security deposit deduction for risk of being contested or ruled invalid in court. Assess based on common legal standards for security deposit disputes.
 
