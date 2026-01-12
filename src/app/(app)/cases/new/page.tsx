@@ -228,6 +228,13 @@ export default function NewCasePage() {
 
       // If no property selected, create a new one
       if (!propertyId) {
+        console.log("Creating new property:", {
+          address: formData.address,
+          city: formData.city,
+          state: getStateCode(formData.state),
+          zipCode: formData.zipCode,
+        });
+
         const propertyResponse = await fetch("/api/properties", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -242,11 +249,18 @@ export default function NewCasePage() {
 
         if (!propertyResponse.ok) {
           const errorData = await propertyResponse.json();
-          throw new Error(errorData.error || "Failed to create property");
+          console.error("Property creation failed:", errorData);
+          throw new Error(errorData.error || errorData.message || "Failed to create property");
         }
 
         const newProperty = await propertyResponse.json();
+
+        if (!newProperty?.id) {
+          throw new Error("Property was created but no ID was returned");
+        }
+
         propertyId = newProperty.id;
+        console.log("Property created with ID:", propertyId);
       }
 
       // Calculate reasonable lease dates if not provided
@@ -258,34 +272,52 @@ export default function NewCasePage() {
         ? new Date(formData.leaseStartDate)
         : new Date(leaseEndDate.getTime() - 365 * 24 * 60 * 60 * 1000); // Default to 1 year prior
 
+      // Validate deposit amount before sending
+      const parsedDeposit = parseFloat(formData.depositAmount);
+      if (isNaN(parsedDeposit) || parsedDeposit <= 0) {
+        throw new Error("Please enter a valid deposit amount");
+      }
+
       // Create the case
+      const casePayload = {
+        propertyId,
+        leaseStartDate: leaseStartDate.toISOString(),
+        leaseEndDate: leaseEndDate.toISOString(),
+        moveOutDate: moveOutDate.toISOString(),
+        depositAmount: parsedDeposit,
+        tenants: [
+          {
+            name: formData.tenantName,
+            email: formData.tenantEmail || undefined,
+            forwardingAddress: formData.forwardingAddress || undefined,
+          },
+        ],
+      };
+
+      console.log("Creating case with payload:", casePayload);
+
       const caseResponse = await fetch("/api/cases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          propertyId,
-          leaseStartDate: leaseStartDate.toISOString(),
-          leaseEndDate: leaseEndDate.toISOString(),
-          moveOutDate: moveOutDate.toISOString(),
-          depositAmount: parseFloat(formData.depositAmount),
-          tenants: [
-            {
-              name: formData.tenantName,
-              email: formData.tenantEmail || undefined,
-              forwardingAddress: formData.forwardingAddress || undefined,
-            },
-          ],
-        }),
+        body: JSON.stringify(casePayload),
       });
 
       if (!caseResponse.ok) {
         const errorData = await caseResponse.json();
+        console.error("Case creation failed:", errorData);
         throw new Error(errorData.error || "Failed to create case");
       }
 
       const newCase = await caseResponse.json();
+
+      // Verify we got a valid case ID before redirecting
+      if (!newCase?.id) {
+        throw new Error("Case was created but no ID was returned");
+      }
+
       router.push(`/cases/${newCase.id}`);
     } catch (err: any) {
+      console.error("Case creation error:", err);
       setError(err.message || "Failed to create case. Please try again.");
       setCreating(false);
     }

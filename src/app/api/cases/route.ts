@@ -71,6 +71,42 @@ export async function POST(request: Request) {
       tenants,
     } = body;
 
+    // Validate required fields
+    if (!propertyId) {
+      return NextResponse.json(
+        { error: "Property ID is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!moveOutDate) {
+      return NextResponse.json(
+        { error: "Move-out date is required" },
+        { status: 400 }
+      );
+    }
+
+    if (depositAmount === undefined || depositAmount === null || isNaN(Number(depositAmount))) {
+      return NextResponse.json(
+        { error: "Valid deposit amount is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!tenants || !Array.isArray(tenants) || tenants.length === 0) {
+      return NextResponse.json(
+        { error: "At least one tenant is required" },
+        { status: 400 }
+      );
+    }
+
+    if (!tenants[0]?.name) {
+      return NextResponse.json(
+        { error: "Tenant name is required" },
+        { status: 400 }
+      );
+    }
+
     // Get the property with its jurisdiction
     const property = await db.property.findUnique({
       where: { id: propertyId, userId: user.id },
@@ -89,7 +125,7 @@ export async function POST(request: Request) {
 
     if (!property) {
       return NextResponse.json(
-        { error: "Property not found" },
+        { error: `Property not found: ${propertyId}` },
         { status: 404 }
       );
     }
@@ -97,7 +133,7 @@ export async function POST(request: Request) {
     const ruleSet = property.jurisdiction.ruleSets[0];
     if (!ruleSet) {
       return NextResponse.json(
-        { error: "No rules found for this jurisdiction" },
+        { error: `No rules found for jurisdiction: ${property.jurisdiction.state} ${property.jurisdiction.city || ''}` },
         { status: 400 }
       );
     }
@@ -177,10 +213,17 @@ export async function POST(request: Request) {
     });
 
     return NextResponse.json(newCase, { status: 201 });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error creating case:", error);
+    // Return more specific error message for debugging
+    const errorMessage = error?.message || "Failed to create case";
+    const errorCode = error?.code || "UNKNOWN";
     return NextResponse.json(
-      { error: "Failed to create case" },
+      {
+        error: `Failed to create case: ${errorMessage}`,
+        code: errorCode,
+        details: process.env.NODE_ENV === "development" ? error?.stack : undefined
+      },
       { status: 500 }
     );
   }
