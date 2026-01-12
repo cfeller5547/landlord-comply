@@ -23,6 +23,25 @@ export async function GET(
     console.log("[API CASE GET] Case ID:", id, "User ID:", user.id);
     const db = requireDb();
 
+    // First, check if the case exists at all (simple query without includes)
+    const basicCase = await db.case.findUnique({
+      where: { id },
+      select: { id: true, userId: true, ruleSetId: true, propertyId: true },
+    });
+    console.log("[API CASE GET] Basic case lookup:", basicCase ? { id: basicCase.id, userId: basicCase.userId } : "NOT FOUND");
+
+    if (!basicCase) {
+      console.log("[API CASE GET] Case does not exist in database");
+      return NextResponse.json({ error: "Case not found" }, { status: 404 });
+    }
+
+    if (basicCase.userId !== user.id) {
+      console.log("[API CASE GET] User ID mismatch - case belongs to:", basicCase.userId, "but user is:", user.id);
+      return NextResponse.json({ error: "Case not found" }, { status: 404 });
+    }
+
+    // Now fetch with full includes
+    console.log("[API CASE GET] Fetching full case data...");
     const caseData = await db.case.findUnique({
       where: { id, userId: user.id },
       include: {
@@ -50,12 +69,10 @@ export async function GET(
         },
       },
     });
+    console.log("[API CASE GET] Full case data retrieved:", caseData ? "SUCCESS" : "FAILED");
 
     if (!caseData) {
-      console.log("[API CASE GET] Case not found for ID:", id, "User:", user.id);
-      // Check if case exists at all (for debugging)
-      const anyCase = await db.case.findUnique({ where: { id } });
-      console.log("[API CASE GET] Case exists without user filter:", !!anyCase, anyCase?.userId || "N/A");
+      console.log("[API CASE GET] Full case query returned null despite basic query success");
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
 
