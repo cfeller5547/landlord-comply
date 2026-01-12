@@ -129,7 +129,7 @@ export async function GET(
       return NextResponse.json({ error: "Tenant not found" }, { status: 404 });
     }
 
-    const landlordName = user.user_metadata?.name || "Property Owner";
+    const landlordName = user.name || "Property Owner";
     const propertyAddress = `${caseData.property.address}${caseData.property.unit ? `, Unit ${caseData.property.unit}` : ""}, ${caseData.property.city}, ${caseData.property.state} ${caseData.property.zipCode}`;
     const returnDeadline = new Date(caseData.dueDate).toLocaleDateString();
 

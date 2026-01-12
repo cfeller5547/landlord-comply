@@ -89,7 +89,7 @@ export async function POST(
       const refundAmount = depositAmount + depositInterest - totalDeductions;
 
       const element = NoticeLetterPDF({
-        landlordName: user.user_metadata?.name || user.email?.split("@")[0] || "Property Owner",
+        landlordName: user.name || user.email?.split("@")[0] || "Property Owner",
         landlordAddress: "", // TODO: Get from user profile
         landlordCity: "",
         landlordState: "",

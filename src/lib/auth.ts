@@ -30,7 +30,7 @@ export async function getDbUser() {
       email: user.email!,
       name: user.user_metadata?.name || user.email?.split("@")[0],
       avatarUrl: user.user_metadata?.avatar_url,
-      plan: defaultPlan as const,
+      plan: defaultPlan as "BETA" | "FREE",
       reminderEnabled: true,
       reminderDays: [7, 3, 1],
       createdAt: new Date(),
