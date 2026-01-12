@@ -844,16 +844,25 @@ export default function NewCasePage() {
             Back
           </Button>
           {currentStep < 3 ? (
-            <Button
-              onClick={() => setCurrentStep((s) => s + 1)}
-              disabled={
-                (currentStep === 1 && !canProceedStep1) ||
-                (currentStep === 2 && !canProceedStep2)
-              }
-            >
-              Continue
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="flex items-center gap-3">
+              {currentStep === 2 && !canProceedStep2 && (
+                <span className="text-sm text-muted-foreground">
+                  {!formData.moveOutDate && "Move-out date required"}
+                  {formData.moveOutDate && !formData.depositAmount && "Deposit amount required"}
+                  {formData.moveOutDate && formData.depositAmount && !formData.tenantName && "Tenant name required"}
+                </span>
+              )}
+              <Button
+                onClick={() => setCurrentStep((s) => s + 1)}
+                disabled={
+                  (currentStep === 1 && !canProceedStep1) ||
+                  (currentStep === 2 && !canProceedStep2)
+                }
+              >
+                Continue
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </div>
           ) : (
             <Button onClick={handleCreateCase} disabled={creating}>
               {creating ? (
