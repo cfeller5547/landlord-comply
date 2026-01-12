@@ -24,7 +24,7 @@ async function getJurisdictions(): Promise<JurisdictionWithRules[]> {
   try {
     const db = requireDb();
     const jurisdictions = await db.jurisdiction.findMany({
-      where: { isActive: true },
+      // where: { isActive: true },
       include: {
         ruleSets: {
           where: { effectiveDate: { lte: new Date() } },

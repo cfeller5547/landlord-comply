@@ -313,24 +313,21 @@ export default function CaseWorkspacePage() {
   // Fetch case data with retry for race conditions
   const fetchCase = useCallback(async (retryCount = 0) => {
     try {
-      console.log("[CasePage] Fetching case:", caseId, "Attempt:", retryCount + 1);
       const res = await fetch(`/api/cases/${caseId}`);
       const data = await res.json();
-      console.log("[CasePage] Response status:", res.status, "Data:", data);
 
       if (!res.ok) {
         // If case not found and this is first attempt, retry after a short delay
         // This handles race conditions where the case was just created
         if (res.status === 404 && retryCount < 2) {
-          console.log("[CasePage] Case not found, retrying in 1s...");
           await new Promise(resolve => setTimeout(resolve, 1000));
           return fetchCase(retryCount + 1);
         }
-        throw new Error(data.error || data.details || `Failed to fetch case (${res.status})`);
+        throw new Error((data.error && data.details ? `${data.error}: ${data.details}` : data.error) || data.details || `Failed to fetch case (${res.status})`);
       }
       setCaseData(data);
     } catch (err) {
-      console.error("[CasePage] Error:", err);
+      console.error("Failed to load case:", err);
       setError(err instanceof Error ? err.message : "Failed to load case");
     } finally {
       setLoading(false);

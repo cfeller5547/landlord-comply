@@ -14,7 +14,7 @@ export async function GET(request: Request) {
       where: {
         ...(stateCode && { stateCode }),
         ...(city && { city: { contains: city, mode: "insensitive" } }),
-        isActive: true,
+        // isActive: true, // Temporarily allow all jurisdictions for debugging
       },
       include: {
         ruleSets: {
