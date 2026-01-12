@@ -132,7 +132,7 @@ This is a legal-adjacent product. Users must trust our accuracy.
 - **States**: CA, NY, TX, WA, IL, CO, FL, MA, AZ, OR, GA, NC (top by landlord concentration)
 - **Cities with overrides**: San Francisco, Los Angeles, Seattle, NYC, Chicago (high-value metros)
 
-### MVP Features
+### MVP Features (Core)
 | Feature | Description |
 |---------|-------------|
 | F1. Jurisdiction Resolver | Address → state + city + coverage level |
@@ -142,6 +142,52 @@ This is a legal-adjacent product. Users must trust our accuracy.
 | F5. Notice Generator | Compliant PDF with jurisdiction-specific language |
 | F6. Proof Packet Export | ZIP with notices, rules snapshot, audit log, attachments |
 | F7. Reminders | Email alerts at 7/3/1 days before deadline |
+
+### MVP Features (High-ROI Additions)
+
+#### 1. Delivery Proof + "Sent Correctly" Flow
+*"Not just a letter—proof you sent it correctly."*
+- Jurisdiction-specific allowed delivery methods display
+- Record: method, date, address used, tracking number
+- Upload proof (USPS receipt, certified mail slip, email screenshot)
+- Delivery proof included in audit trail
+
+#### 2. Forwarding Address Capture + Logging
+*"Never get burned by missing forwarding address."*
+- Request forwarding address template (email + printable letter)
+- Track status: Provided / Not provided / Requested / Refused
+- Auto-includes in notice: "Forwarding address requested on X; not received"
+
+#### 3. Wear & Tear / Deduction Risk Guidance
+*"Know what's risky before your tenant disputes it."*
+- Risk level per deduction: Low / Medium / High
+- Item age tracking for proration awareness
+- Damage type classification: Normal wear, Beyond normal, Intentional, Negligence
+- Evidence attachment indicator
+
+#### 4. Exposure / Penalty Risk Calculator
+*"A $99 tool to avoid a $5,000 mistake."*
+- Potential penalty exposure based on jurisdiction + deposit amount
+- Deadline risk and documentation risk assessment
+- Citations and legal references included
+
+#### 5. AI Deduction Description Writer (Google Gemini)
+*"Write deductions that hold up in court."*
+- One-click description improvement per deduction
+- Context inputs: what happened, location, why beyond wear, invoice info
+- Generates court-defensible, specific language
+- AI-generated indicator stored in audit log
+- See `docs/AI_INTEGRATION.md` for full documentation
+
+#### 6. Packet Quality Checklist
+*"Catch mistakes before your tenant does."*
+- Pre-export checklist with hard gates:
+  - Move-out date present
+  - Deadline not missed (or warned)
+  - Totals reconcile
+  - Required documents generated
+  - Delivery method selected
+- Output: "Ready to send" vs "Fix these issues"
 
 ### Explicitly Out of Scope (MVP)
 - Eviction notices / pay-or-quit
@@ -206,6 +252,11 @@ This is a legal-adjacent product. Users must trust our accuracy.
 | Layer | Technology |
 |-------|------------|
 | Framework | Next.js 16 (App Router, TypeScript) |
+| Database | PostgreSQL via Supabase + Prisma ORM |
+| Auth | Supabase Auth (email/password) |
+| Storage | Supabase Storage (attachments, documents) |
+| PDF Generation | @react-pdf/renderer |
+| AI | Google Gemini API (@google/generative-ai) |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | Icons | lucide-react |
 | Fonts | Inter |
@@ -229,65 +280,183 @@ src/
 │   ├── page.tsx                # Landing page (address demo, conversion-focused)
 │   ├── globals.css             # Calm Ledger theme
 │   ├── (public)/layout.tsx     # Public pages wrapper
+│   ├── (auth)/                 # Auth pages
+│   │   ├── layout.tsx
+│   │   ├── login/page.tsx
+│   │   ├── signup/page.tsx
+│   │   └── actions.ts          # Server actions for auth
+│   ├── auth/callback/route.ts  # OAuth callback handler
+│   ├── api/                    # API routes
+│   │   ├── cases/
+│   │   │   ├── route.ts                    # GET/POST cases
+│   │   │   └── [id]/
+│   │   │       ├── route.ts                # GET/PATCH/DELETE case
+│   │   │       ├── status/route.ts         # PATCH status + delivery proof
+│   │   │       ├── deductions/route.ts     # GET/POST/PATCH/DELETE deductions
+│   │   │       ├── attachments/route.ts    # GET/POST/DELETE attachments
+│   │   │       ├── checklist/route.ts      # GET/PATCH/POST/DELETE checklist
+│   │   │       ├── documents/generate/route.ts  # POST generate PDFs
+│   │   │       ├── exposure/route.ts       # GET penalty exposure
+│   │   │       ├── quality-check/route.ts  # GET quality checklist
+│   │   │       └── tenants/[tenantId]/
+│   │   │           └── forwarding-address/route.ts  # PATCH/GET + templates
+│   │   ├── deductions/
+│   │   │   └── [id]/improve/route.ts       # POST AI improvement
+│   │   ├── jurisdictions/
+│   │   │   ├── route.ts                    # GET all jurisdictions
+│   │   │   └── lookup/route.ts             # GET lookup by state/city
+│   │   ├── properties/route.ts             # GET/POST properties
+│   │   └── dashboard/route.ts              # GET dashboard stats
 │   └── (app)/
 │       ├── layout.tsx          # App shell with sidebar
 │       ├── dashboard/page.tsx  # KPI cards + Deadline Radar table
 │       ├── cases/
 │       │   ├── page.tsx        # Cases list
 │       │   ├── new/page.tsx    # 3-step new case wizard
-│       │   └── [id]/page.tsx   # Case workspace (6 tabs)
+│       │   └── [id]/page.tsx   # Case workspace (all features)
 │       ├── coverage/page.tsx   # Jurisdiction grid
 │       ├── documents/page.tsx  # Document library
 │       └── settings/page.tsx   # Account settings
 ├── components/
 │   ├── ui/                     # shadcn/ui components
-│   ├── layout/sidebar.tsx      # App navigation
+│   ├── layout/
+│   │   ├── sidebar.tsx         # App navigation
+│   │   └── user-menu.tsx       # User dropdown
 │   └── domain/                 # Business-specific components
 │       ├── deadline-chip.tsx   # Color-coded countdown
 │       ├── coverage-badge.tsx  # full/partial/state_only
 │       ├── status-badge.tsx    # active/pending/sent/closed
 │       └── trust-banner.tsx    # "Not legal advice" disclaimer
-└── lib/
-    ├── types.ts                # TypeScript interfaces
-    ├── mock-data.ts            # Sample jurisdictions + cases
-    └── utils.ts                # Helpers (cn function)
+├── lib/
+│   ├── ai/
+│   │   └── gemini.ts           # Google Gemini AI integration
+│   ├── pdf/
+│   │   ├── notice-letter.tsx   # Notice letter PDF template
+│   │   └── itemized-statement.tsx  # Itemized statement PDF template
+│   ├── supabase/
+│   │   ├── client.ts           # Browser Supabase client
+│   │   ├── server.ts           # Server Supabase client
+│   │   └── middleware.ts       # Auth middleware helper
+│   ├── auth.ts                 # getCurrentUser helper
+│   ├── db.ts                   # Prisma client
+│   ├── types.ts                # TypeScript interfaces
+│   ├── mock-data.ts            # Sample jurisdictions + cases
+│   └── utils.ts                # Helpers (cn function)
+├── middleware.ts               # Next.js middleware for auth
+├── prisma/
+│   ├── schema.prisma           # Database schema
+│   └── seed.ts                 # Seed jurisdictions and rules
+└── scripts/
+    └── setup-storage.ts        # Create Supabase storage bucket
 ```
 
 ---
 
 ## Data Model
 
-### Core Entities
-```typescript
-Case {
-  property: Property           // Address + jurisdiction
-  tenants: Tenant[]           // Names, emails, forwarding addresses
-  moveOutDate: Date           // Triggers deadline calculation
-  depositAmount: number
-  depositInterest: number     // Auto-calculated if required
-  deductions: DeductionItem[] // Line items with evidence links
-  dueDate: Date              // Calculated from rules
-  status: 'active' | 'pending_send' | 'sent' | 'closed'
-  ruleSet: RuleSet           // Versioned snapshot of rules used
-  documents: GeneratedDocument[]
-  auditEvents: AuditEvent[]  // Timestamp log of all actions
+### Core Entities (Prisma Schema)
+
+```prisma
+model Case {
+  id                String       @id @default(uuid())
+  userId            String
+  propertyId        String
+  ruleSetId         String
+  status            CaseStatus   @default(ACTIVE)
+  moveOutDate       DateTime
+  dueDate           DateTime
+  depositAmount     Decimal      @db.Decimal(10, 2)
+  depositInterest   Decimal?     @db.Decimal(10, 2)
+
+  // Delivery tracking
+  deliveryMethod    String?
+  deliveryDate      DateTime?
+  deliveryAddress   String?
+  deliveryTracking  String?
+  deliveryProofIds  String[]     // References to Attachment IDs
+
+  // Closure
+  closedAt          DateTime?
+  closedReason      String?
+
+  // Relations
+  property          Property     @relation(...)
+  ruleSet           RuleSet      @relation(...)
+  tenants           Tenant[]
+  deductions        Deduction[]
+  documents         Document[]
+  attachments       Attachment[]
+  checklistItems    ChecklistItem[]
+  auditEvents       AuditEvent[]
 }
 
-Jurisdiction {
-  state: string
-  city?: string
-  coverageLevel: 'full' | 'partial' | 'state_only'
-  lastVerified: Date
+model Tenant {
+  id                          String                  @id @default(uuid())
+  name                        String
+  email                       String?
+  phone                       String?
+  isPrimary                   Boolean                 @default(false)
+
+  // Forwarding address tracking
+  forwardingAddress           String?
+  forwardingAddressStatus     ForwardingAddressStatus @default(NOT_REQUESTED)
+  forwardingAddressRequestedAt DateTime?
+  forwardingAddressRequestMethod String?
 }
 
-DepositRules {
-  returnDeadlineDays: number
-  interestRequired: boolean
-  interestRate?: number
-  itemizationRequired: boolean
-  maxDepositMonths?: number
-  penalties: PenaltyInfo[]
-  citations: Citation[]      // Links to statutes
+model Deduction {
+  id                  String             @id @default(uuid())
+  description         String
+  amount              Decimal            @db.Decimal(10, 2)
+  category            DeductionCategory
+
+  // Risk assessment
+  riskLevel           DeductionRiskLevel?
+  itemAge             Int?               // Age in months
+  damageType          DamageType?
+  hasEvidence         Boolean            @default(false)
+
+  // AI tracking
+  aiGenerated         Boolean            @default(false)
+  originalDescription String?            // Preserved before AI improvement
+
+  attachmentIds       String[]           // Evidence references
+}
+
+// Enums
+enum CaseStatus { ACTIVE, PENDING_SEND, SENT, CLOSED }
+enum ForwardingAddressStatus { NOT_REQUESTED, REQUESTED, PROVIDED, REFUSED, NOT_APPLICABLE }
+enum DeductionRiskLevel { LOW, MEDIUM, HIGH }
+enum DamageType { NORMAL_WEAR, BEYOND_NORMAL, INTENTIONAL, NEGLIGENCE }
+enum DeductionCategory { CLEANING, REPAIRS, DAMAGES, UNPAID_RENT, UTILITIES, OTHER }
+enum AttachmentType { PHOTO, INVOICE, RECEIPT, INSPECTION, DELIVERY_PROOF, OTHER }
+```
+
+### Supporting Entities
+
+```prisma
+model Jurisdiction {
+  state          String
+  city           String?
+  coverageLevel  CoverageLevel  // FULL, PARTIAL, STATE_ONLY
+  lastVerified   DateTime
+}
+
+model RuleSet {
+  returnDeadlineDays    Int
+  interestRequired      Boolean
+  interestRate          Decimal?
+  itemizationRequired   Boolean
+  maxDepositMonths      Decimal?
+  allowedDeliveryMethods String[]
+  penalties             Json       // Array of penalty rules
+  citations             Citation[]
+}
+
+model Citation {
+  code   String         // e.g., "Cal. Civ. Code § 1950.5"
+  title  String?
+  url    String?
 }
 ```
 
@@ -295,24 +464,40 @@ DepositRules {
 
 ## Current State
 
-### What's Built
-- All pages styled and functional
+### What's Built (Complete MVP)
+
+**Frontend**
+- All pages styled and functional with Tailwind CSS v4 + shadcn/ui
 - Interactive landing page with address autocomplete demo
-- Case workspace with 6-step workflow
+- Case workspace with all 6 MVP features integrated
 - Responsive design (mobile + desktop)
 - Domain components for deadlines, coverage, status
+
+**Backend**
+- Complete API layer with all CRUD operations
+- PDF generation for notice letters and itemized statements
+- File upload/download via Supabase Storage
+- Google Gemini AI integration for description improvement
+- Quality check and exposure calculator endpoints
+
+**Database & Auth**
 - **Supabase project**: `txziykaoatbqvihveasu` (West US)
-- **Database**: Postgres with full schema deployed
+- **Database**: PostgreSQL with full Prisma schema deployed
 - **Authentication**: Supabase Auth with email/password
+- **Storage**: Supabase Storage bucket for attachments
 - **Seed data**: 13 jurisdictions with rules (CA, NY, TX, WA, IL, CO, FL, MA + major cities)
 
+**Documentation**
+- `README.md` - Project overview and setup
+- `docs/AI_INTEGRATION.md` - Full AI integration documentation
+- `CLAUDE.md` - This file (project context)
+
 ### What's Needed (Next Steps)
-- API routes for CRUD operations (cases, properties, deductions)
-- Connect frontend pages to real database (replace mock data)
 - Real address validation/geocoding API
-- Server-side PDF generation
-- Email service for reminders
+- Email service for reminders (7/3/1 days)
 - Payment processing (Stripe)
+- Proof packet ZIP export
+- Production deployment (Vercel)
 
 ---
 
@@ -327,19 +512,95 @@ DepositRules {
 ## Commands
 
 ```bash
-npm run dev       # Start dev server (localhost:3000)
-npm run build     # Production build
-npm run lint      # ESLint
-npm run db:push   # Push Prisma schema to database
-npm run db:seed   # Seed jurisdictions and rules
-npm run db:studio # Open Prisma Studio (database GUI)
+# Development
+npm run dev           # Start dev server (localhost:3000)
+npm run build         # Production build
+npm run start         # Start production server
+npm run lint          # ESLint
+
+# Database
+npx prisma generate   # Generate Prisma client
+npx prisma db push    # Push schema to database
+npx prisma db seed    # Seed jurisdictions and rules (via prisma/seed.ts)
+npx prisma studio     # Open Prisma Studio (database GUI)
+
+# Setup
+npx tsx scripts/setup-storage.ts  # Create Supabase storage bucket
 ```
+
+---
+
+## Environment Variables
+
+```env
+# Database (Prisma)
+DATABASE_URL="postgresql://..."
+
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"  # For storage setup
+
+# Google AI (Gemini) - Optional, for AI deduction improvement
+GOOGLE_AI_API_KEY="your-gemini-api-key"
+```
+
+Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
+
+---
+
+## API Routes
+
+### Cases
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cases` | List all cases for user |
+| POST | `/api/cases` | Create new case |
+| GET | `/api/cases/[id]` | Get case details |
+| PATCH | `/api/cases/[id]` | Update case |
+| DELETE | `/api/cases/[id]` | Delete case |
+| PATCH | `/api/cases/[id]/status` | Update status + delivery proof |
+| GET | `/api/cases/[id]/exposure` | Get penalty exposure calculation |
+| GET | `/api/cases/[id]/quality-check` | Run pre-send quality check |
+
+### Deductions
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/cases/[id]/deductions` | List deductions |
+| POST | `/api/cases/[id]/deductions` | Add deduction |
+| PATCH | `/api/cases/[id]/deductions` | Update deduction (with risk fields) |
+| DELETE | `/api/cases/[id]/deductions` | Delete deduction |
+| POST | `/api/deductions/[id]/improve` | AI-improve description |
+
+### Documents & Attachments
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/cases/[id]/documents/generate` | Generate PDF (notice/itemized) |
+| GET | `/api/cases/[id]/attachments` | List attachments |
+| POST | `/api/cases/[id]/attachments` | Upload attachment |
+| DELETE | `/api/cases/[id]/attachments` | Delete attachment |
+
+### Tenants & Forwarding Address
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| PATCH | `/api/cases/[id]/tenants/[tenantId]/forwarding-address` | Update forwarding address |
+| GET | `/api/cases/[id]/tenants/[tenantId]/forwarding-address` | Get templates (email/letter) |
+
+### Other
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/jurisdictions` | List all jurisdictions |
+| GET | `/api/jurisdictions/lookup` | Lookup by state/city |
+| GET | `/api/properties` | List properties |
+| POST | `/api/properties` | Create property |
+| GET | `/api/dashboard` | Dashboard stats |
 
 ---
 
 ## Documentation
 
 Full specs in `/docs/`:
+- `AI_INTEGRATION.md` - Google Gemini AI integration details
 - `LandlordComply_PRD.md` - Complete product requirements
 - `LandlordComply_Wireframes.md` - Screen specifications
 - `LandlordComply_DesignSystem.md` - Visual design guide
