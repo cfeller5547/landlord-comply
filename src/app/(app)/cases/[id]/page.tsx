@@ -313,11 +313,16 @@ export default function CaseWorkspacePage() {
   // Fetch case data
   const fetchCase = useCallback(async () => {
     try {
+      console.log("[CasePage] Fetching case:", caseId);
       const res = await fetch(`/api/cases/${caseId}`);
-      if (!res.ok) throw new Error("Failed to fetch case");
       const data = await res.json();
+      console.log("[CasePage] Response status:", res.status, "Data:", data);
+      if (!res.ok) {
+        throw new Error(data.error || data.details || `Failed to fetch case (${res.status})`);
+      }
       setCaseData(data);
     } catch (err) {
+      console.error("[CasePage] Error:", err);
       setError(err instanceof Error ? err.message : "Failed to load case");
     } finally {
       setLoading(false);

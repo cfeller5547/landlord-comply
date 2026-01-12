@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
 
+// Force dynamic rendering to ensure fresh data
+export const dynamic = "force-dynamic";
+
 // GET /api/cases - List user's cases
 export async function GET(request: Request) {
   try {
