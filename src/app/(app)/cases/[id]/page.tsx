@@ -62,6 +62,7 @@ import {
   calculateConfidence,
   DeductionDrawer,
   DeductionRow,
+  computeRisk,
 } from "@/components/domain";
 import {
   CaseCreatedSurvey,
@@ -2265,6 +2266,54 @@ export default function CaseWorkspacePage() {
                 rows={2}
               />
             </div>
+
+            {/* Live Risk Preview */}
+            {deductionForm.description && deductionForm.amount && (
+              <div className="pt-2">
+                {(() => {
+                  const previewDeduction = {
+                    id: "preview",
+                    description: deductionForm.description,
+                    category: deductionForm.category,
+                    amount: parseFloat(deductionForm.amount) || 0,
+                    attachmentIds: [],
+                    hasEvidence: false,
+                    aiGenerated: false,
+                  };
+                  const risk = computeRisk(previewDeduction);
+                  return (
+                    <div className={cn(
+                      "p-3 rounded-lg border text-sm",
+                      risk.level === "HIGH" ? "bg-red-50 border-red-200" :
+                      risk.level === "MEDIUM" ? "bg-yellow-50 border-yellow-200" :
+                      "bg-green-50 border-green-200"
+                    )}>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge className={cn(
+                          "text-xs",
+                          risk.level === "HIGH" ? "bg-red-100 text-red-800" :
+                          risk.level === "MEDIUM" ? "bg-yellow-100 text-yellow-800" :
+                          "bg-green-100 text-green-800"
+                        )}>
+                          {risk.level} Risk
+                        </Badge>
+                        <span className="text-muted-foreground text-xs">Preview</span>
+                      </div>
+                      {risk.suggestions.length > 0 && (
+                        <div className="space-y-1">
+                          {risk.suggestions.slice(0, 2).map((s, i) => (
+                            <p key={i} className="text-xs flex items-start gap-1">
+                              <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                              {s.action}
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button

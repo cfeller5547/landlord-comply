@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Sheet,
   SheetContent,
@@ -201,14 +201,14 @@ export function DeductionDrawer({
   const [localCategory, setLocalCategory] = useState("");
 
   // Sync local state when deduction changes
-  useState(() => {
+  useEffect(() => {
     if (deduction) {
       setLocalDescription(deduction.description);
       setLocalAmount(String(deduction.amount));
       setLocalNotes(deduction.notes || "");
       setLocalCategory(deduction.category);
     }
-  });
+  }, [deduction]);
 
   if (!deduction) return null;
 
@@ -471,34 +471,71 @@ export function DeductionDrawer({
                   {risk.level} Risk
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {risk.level === "LOW" ? "Looking good" :
+                  {risk.level === "LOW" ? "Ready for dispute" :
                    risk.level === "MEDIUM" ? "Some improvements possible" :
                    "Needs attention"}
                 </span>
               </div>
 
-              {risk.reasons.length > 0 && (
+              {/* Show what's been addressed (positive feedback) */}
+              {risk.level === "LOW" && (
+                <div className="space-y-1 mb-3 text-green-700">
+                  <p className="text-sm flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    This deduction is well-documented
+                  </p>
+                  {deduction.hasEvidence && (
+                    <p className="text-sm flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Evidence attached
+                    </p>
+                  )}
+                  {deduction.aiGenerated && (
+                    <p className="text-sm flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4" />
+                      Description improved with AI
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Show issues for non-LOW risk */}
+              {risk.level !== "LOW" && risk.reasons.length > 0 && (
                 <div className="space-y-1 mb-3">
                   {risk.reasons.map((reason, i) => (
                     <p key={i} className="text-sm flex items-start gap-2">
-                      <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-muted-foreground" />
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0 text-amber-600" />
                       {reason}
                     </p>
                   ))}
                 </div>
               )}
 
+              {/* Show suggestions with impact */}
               {risk.suggestions.length > 0 && !isClosed && (
                 <div className="space-y-2 pt-3 border-t border-current/10">
                   <p className="text-xs font-medium text-muted-foreground">
-                    Suggested actions:
+                    To reduce risk:
                   </p>
                   {risk.suggestions.map((suggestion, i) => (
-                    <div key={i} className="flex items-center gap-2 text-sm">
-                      <CheckCircle className="h-4 w-4 text-primary" />
-                      <span>{suggestion.action}</span>
+                    <div key={i} className="flex items-start gap-2 text-sm">
+                      <div className="h-4 w-4 rounded-full border-2 border-primary flex-shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-medium">{suggestion.action}</span>
+                        <p className="text-xs text-muted-foreground">{suggestion.impact}</p>
+                      </div>
                     </div>
                   ))}
+                </div>
+              )}
+
+              {/* Success state when all suggestions addressed */}
+              {risk.level === "LOW" && risk.suggestions.length === 0 && !isClosed && (
+                <div className="pt-3 border-t border-green-200">
+                  <p className="text-sm text-green-700 flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4" />
+                    All recommendations addressed!
+                  </p>
                 </div>
               )}
             </div>
