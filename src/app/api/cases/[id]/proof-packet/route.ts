@@ -28,16 +28,21 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const startTime = Date.now();
+  const { id: caseId } = await params;
+  console.log(`[ProofPacket] Starting generation for case ${caseId}`);
+
   try {
     const user = await getDbUser();
     if (!user) {
+      console.log(`[ProofPacket] Unauthorized request for case ${caseId}`);
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { id: caseId } = await params;
     const db = requireDb();
 
     // Fetch complete case data
+    console.log(`[ProofPacket] Fetching case data...`);
     const caseData = await db.case.findUnique({
       where: { id: caseId, userId: user.id },
       include: {
@@ -66,8 +71,10 @@ export async function GET(
     });
 
     if (!caseData) {
+      console.log(`[ProofPacket] Case ${caseId} not found`);
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
+    console.log(`[ProofPacket] Case data fetched. Docs: ${caseData.documents.length}, Attachments: ${caseData.attachments.length}`);
 
     // Check if required documents exist
     const hasNoticeLetter = caseData.documents.some(
@@ -78,6 +85,7 @@ export async function GET(
     );
 
     if (!hasNoticeLetter || !hasItemized) {
+      console.log(`[ProofPacket] Missing required documents. Notice: ${hasNoticeLetter}, Itemized: ${hasItemized}`);
       return NextResponse.json(
         {
           error: "Cannot generate proof packet - missing required documents",
@@ -91,15 +99,18 @@ export async function GET(
     }
 
     // Create ZIP archive
+    console.log(`[ProofPacket] Initializing ZIP archive...`);
     const archive = archiver("zip", { zlib: { level: 9 } });
     const chunks: Buffer[] = [];
 
     archive.on("data", (chunk) => chunks.push(chunk));
     archive.on("error", (err) => {
+      console.error(`[ProofPacket] Archiver error:`, err);
       throw err;
     });
 
     // 1. Add Case Summary
+    console.log(`[ProofPacket] Adding summary text files...`);
     const caseSummary = generateCaseSummary(caseData);
     archive.append(caseSummary, { name: "00_CASE_SUMMARY.txt" });
 
@@ -112,17 +123,22 @@ export async function GET(
     archive.append(auditLog, { name: "02_AUDIT_LOG.txt" });
 
     // 4. Add Documents (PDFs)
+    console.log(`[ProofPacket] Processing ${caseData.documents.length} PDF documents...`);
     for (const doc of caseData.documents) {
       if (doc.fileUrl) {
         const storagePath = extractStoragePath(doc.fileUrl);
         if (storagePath) {
+          console.log(`[ProofPacket] Downloading document ${doc.id} from ${storagePath}`);
           try {
             const { data, error } = await getSupabaseClient().storage
               .from("case-files")
               .download(storagePath);
 
-            if (!error && data) {
+            if (error) {
+              console.error(`[ProofPacket] Supabase download error for doc ${doc.id}:`, error);
+            } else if (data) {
               const buffer = Buffer.from(await data.arrayBuffer());
+              console.log(`[ProofPacket] Document ${doc.id} downloaded (${buffer.length} bytes)`);
               const filename =
                 doc.type === "NOTICE_LETTER"
                   ? `03_Notice_Letter_v${doc.version}.pdf`
@@ -130,34 +146,43 @@ export async function GET(
               archive.append(buffer, { name: filename });
             }
           } catch (err) {
-            console.error(`Failed to download document ${doc.id}:`, err);
+            console.error(`[ProofPacket] Failed to download document ${doc.id}:`, err);
           }
+        } else {
+          console.log(`[ProofPacket] Skipping document ${doc.id}: invalid file URL`);
         }
       }
     }
 
     // 5. Add Attachments (evidence)
     if (caseData.attachments.length > 0) {
+      console.log(`[ProofPacket] Processing ${caseData.attachments.length} attachments...`);
       for (let i = 0; i < caseData.attachments.length; i++) {
         const att = caseData.attachments[i];
         if (att.fileUrl) {
           const storagePath = extractStoragePath(att.fileUrl);
           if (storagePath) {
+            console.log(`[ProofPacket] Downloading attachment ${att.id} from ${storagePath}`);
             try {
               const { data, error } = await getSupabaseClient().storage
                 .from("case-files")
                 .download(storagePath);
 
-              if (!error && data) {
+              if (error) {
+                 console.error(`[ProofPacket] Supabase download error for attachment ${att.id}:`, error);
+              } else if (data) {
                 const buffer = Buffer.from(await data.arrayBuffer());
+                console.log(`[ProofPacket] Attachment ${att.id} downloaded (${buffer.length} bytes)`);
                 const safeType = att.type.toLowerCase().replace(/_/g, "-");
                 archive.append(buffer, {
                   name: `evidence/${String(i + 1).padStart(2, "0")}_${safeType}_${att.name}`,
                 });
               }
             } catch (err) {
-              console.error(`Failed to download attachment ${att.id}:`, err);
+              console.error(`[ProofPacket] Failed to download attachment ${att.id}:`, err);
             }
+          } else {
+             console.log(`[ProofPacket] Skipping attachment ${att.id}: invalid file URL`);
           }
         }
       }
@@ -168,12 +193,14 @@ export async function GET(
     archive.append(deductionsSummary, { name: "05_DEDUCTIONS_SUMMARY.txt" });
 
     // Finalize archive
+    console.log(`[ProofPacket] Finalizing archive...`);
     await archive.finalize();
 
     // Wait for all chunks
     await new Promise<void>((resolve) => archive.on("end", resolve));
-
+    
     const zipBuffer = Buffer.concat(chunks);
+    console.log(`[ProofPacket] Archive generated. Total size: ${zipBuffer.length} bytes. Time taken: ${Date.now() - startTime}ms`);
 
     // Generate filename
     const propertyAddress = caseData.property.address
@@ -192,10 +219,12 @@ export async function GET(
         metadata: {
           documentCount: caseData.documents.length,
           attachmentCount: caseData.attachments.length,
+          zipSize: zipBuffer.length,
         },
       },
     });
 
+    console.log(`[ProofPacket] Sending response...`);
     return new NextResponse(zipBuffer, {
       headers: {
         "Content-Type": "application/zip",
@@ -204,7 +233,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Error generating proof packet:", error);
+    console.error(`[ProofPacket] CRITICAL ERROR after ${Date.now() - startTime}ms:`, error);
     return NextResponse.json(
       { error: "Failed to generate proof packet" },
       { status: 500 }
