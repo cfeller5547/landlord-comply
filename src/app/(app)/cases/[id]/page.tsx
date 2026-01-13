@@ -312,6 +312,16 @@ export default function CaseWorkspacePage() {
     invoiceInfo: "",
   });
 
+  // Add Deduction dialog state
+  const [showAddDeductionDialog, setShowAddDeductionDialog] = useState(false);
+  const [addingDeduction, setAddingDeduction] = useState(false);
+  const [deductionForm, setDeductionForm] = useState({
+    description: "",
+    category: "REPAIRS" as "CLEANING" | "REPAIRS" | "UNPAID_RENT" | "UTILITIES" | "DAMAGES" | "OTHER",
+    amount: "",
+    notes: "",
+  });
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const deliveryProofInputRef = useRef<HTMLInputElement>(null);
 
@@ -405,6 +415,53 @@ export default function CaseWorkspacePage() {
       alert(err instanceof Error ? err.message : "Failed to generate PDF");
     } finally {
       setGeneratingPdf(null);
+    }
+  };
+
+  // Add deduction
+  const handleAddDeduction = async () => {
+    if (!deductionForm.description.trim() || !deductionForm.amount) {
+      toast.error("Please fill in description and amount");
+      return;
+    }
+
+    const amount = parseFloat(deductionForm.amount);
+    if (isNaN(amount) || amount <= 0) {
+      toast.error("Please enter a valid amount");
+      return;
+    }
+
+    setAddingDeduction(true);
+    try {
+      const res = await fetch(`/api/cases/${caseId}/deductions`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          description: deductionForm.description.trim(),
+          category: deductionForm.category,
+          amount: amount,
+          notes: deductionForm.notes.trim() || null,
+        }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to add deduction");
+      }
+
+      toast.success("Deduction added successfully");
+      setShowAddDeductionDialog(false);
+      setDeductionForm({
+        description: "",
+        category: "REPAIRS",
+        amount: "",
+        notes: "",
+      });
+      await fetchCase();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to add deduction");
+    } finally {
+      setAddingDeduction(false);
     }
   };
 
@@ -1060,9 +1117,7 @@ export default function CaseWorkspacePage() {
                     You can skip this section and proceed to generate documents.
                   </p>
                   {!isClosed && (
-                    <Button variant="outline" onClick={() => {
-                        toast.info("Add deduction feature - click the + Add Deduction button to add one");
-                    }}>
+                    <Button variant="outline" onClick={() => setShowAddDeductionDialog(true)}>
                       <Plus className="h-4 w-4 mr-2" />
                       Add Deduction
                     </Button>
@@ -1935,6 +1990,117 @@ export default function CaseWorkspacePage() {
                 </Button>
               </>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Deduction Dialog */}
+      <Dialog open={showAddDeductionDialog} onOpenChange={setShowAddDeductionDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Add Deduction
+            </DialogTitle>
+            <DialogDescription>
+              Add an itemized deduction from the security deposit.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <Label htmlFor="deduction-description">Description *</Label>
+              <Input
+                id="deduction-description"
+                value={deductionForm.description}
+                onChange={(e) =>
+                  setDeductionForm({ ...deductionForm, description: e.target.value })
+                }
+                placeholder="e.g., Carpet cleaning due to pet stains"
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="deduction-category">Category *</Label>
+                <Select
+                  value={deductionForm.category}
+                  onValueChange={(value) =>
+                    setDeductionForm({
+                      ...deductionForm,
+                      category: value as typeof deductionForm.category,
+                    })
+                  }
+                >
+                  <SelectTrigger id="deduction-category">
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CLEANING">Cleaning</SelectItem>
+                    <SelectItem value="REPAIRS">Repairs</SelectItem>
+                    <SelectItem value="DAMAGES">Damages</SelectItem>
+                    <SelectItem value="UNPAID_RENT">Unpaid Rent</SelectItem>
+                    <SelectItem value="UTILITIES">Utilities</SelectItem>
+                    <SelectItem value="OTHER">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="deduction-amount">Amount *</Label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                  <Input
+                    id="deduction-amount"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={deductionForm.amount}
+                    onChange={(e) =>
+                      setDeductionForm({ ...deductionForm, amount: e.target.value })
+                    }
+                    placeholder="0.00"
+                    className="pl-7"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="deduction-notes">Notes (optional)</Label>
+              <Textarea
+                id="deduction-notes"
+                value={deductionForm.notes}
+                onChange={(e) =>
+                  setDeductionForm({ ...deductionForm, notes: e.target.value })
+                }
+                placeholder="Additional details, invoice numbers, etc."
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowAddDeductionDialog(false);
+                setDeductionForm({
+                  description: "",
+                  category: "REPAIRS",
+                  amount: "",
+                  notes: "",
+                });
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleAddDeduction} disabled={addingDeduction}>
+              {addingDeduction ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Plus className="h-4 w-4 mr-2" />
+              )}
+              Add Deduction
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
