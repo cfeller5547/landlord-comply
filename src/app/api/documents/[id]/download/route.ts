@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/documents/[id]/download - Download a document
 export async function GET(
@@ -20,7 +21,9 @@ export async function GET(
     const document = await db.document.findUnique({
       where: { id },
       include: {
-        case: true,
+        case: {
+          select: { id: true, userId: true },
+        },
       },
     });
 
@@ -32,9 +35,36 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // Redirect to file URL for download
-    // In a real app, we might want to proxy this to force download headers
-    return NextResponse.redirect(document.fileUrl || "");
+    // Check if document has a file associated
+    if (!document.fileName) {
+      return NextResponse.json(
+        { error: "Document has no file associated" },
+        { status: 400 }
+      );
+    }
+
+    // Reconstruct the file path in storage
+    const filePath = `documents/${user.id}/${document.case.id}/${document.fileName}`;
+
+    // Create signed URL using admin client for secure download
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.storage
+      .from("case-files")
+      .createSignedUrl(filePath, 60); // Valid for 60 seconds
+
+    if (error || !data?.signedUrl) {
+      console.error("Failed to generate signed URL:", error);
+      return NextResponse.json(
+        {
+          error: "Failed to generate download link",
+          details: error?.message || "No signed URL returned"
+        },
+        { status: 500 }
+      );
+    }
+
+    // Redirect to the signed URL
+    return NextResponse.redirect(data.signedUrl);
 
   } catch (error) {
     console.error("Error downloading document:", error);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/documents/[id]/view - View a document (redirect to signed URL)
 export async function GET(
@@ -20,7 +21,9 @@ export async function GET(
     const document = await db.document.findUnique({
       where: { id },
       include: {
-        case: true,
+        case: {
+          select: { id: true, userId: true },
+        },
       },
     });
 
@@ -32,9 +35,36 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
     }
 
-    // For now, redirect to the public URL if stored publicly, or signed URL
-    // Since we're using public buckets for beta, just redirect to fileUrl
-    return NextResponse.redirect(document.fileUrl || "");
+    // Check if document has a file associated
+    if (!document.fileName) {
+      return NextResponse.json(
+        { error: "Document has no file associated" },
+        { status: 400 }
+      );
+    }
+
+    // Reconstruct the file path in storage
+    const filePath = `documents/${user.id}/${document.case.id}/${document.fileName}`;
+
+    // Create signed URL using admin client
+    const supabase = createAdminClient();
+    const { data, error } = await supabase.storage
+      .from("case-files")
+      .createSignedUrl(filePath, 300); // Valid for 5 minutes for viewing
+
+    if (error || !data?.signedUrl) {
+      console.error("Failed to generate signed URL:", error);
+      return NextResponse.json(
+        {
+          error: "Failed to generate view link",
+          details: error?.message || "No signed URL returned"
+        },
+        { status: 500 }
+      );
+    }
+
+    // Redirect to the signed URL
+    return NextResponse.redirect(data.signedUrl);
 
   } catch (error) {
     console.error("Error viewing document:", error);

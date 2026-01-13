@@ -101,6 +101,16 @@ export const sampleUnpaidRentDeduction = {
   updatedAt: new Date("2024-01-05"),
 };
 
+// Simple sample deduction for basic tests
+export const sampleDeduction = sampleLowRiskDeduction;
+
+// Array of sample deductions for list tests
+export const sampleDeductions = [
+  sampleLowRiskDeduction,
+  sampleMediumRiskDeduction,
+  sampleHighRiskDeduction,
+];
+
 // All deduction categories for testing
 export const deductionCategories = [
   "CLEANING",
