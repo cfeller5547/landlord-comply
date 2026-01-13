@@ -12,8 +12,9 @@ export const config = {
   features: {
     // Beta-specific features
     showBetaBadge: APP_STAGE === "beta",
-    showFeedbackButton: APP_STAGE === "beta",
-    showMicroSurveys: APP_STAGE === "beta",
+    // Feedback features visible in development and beta, hidden in production
+    showFeedbackButton: APP_STAGE !== "production",
+    showMicroSurveys: APP_STAGE !== "production",
 
     // Paid features (disabled in beta)
     requirePayment: APP_STAGE === "production",
