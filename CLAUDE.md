@@ -237,10 +237,18 @@ This is a legal-adjacent product. Users must trust our accuracy.
 - Terms, Privacy, Disclaimers
 
 ### App Pages (Authenticated)
-- `/dashboard` - Active cases, deadline radar, quick actions
-- `/cases` - List with filters
+- `/dashboard` - **Action Center**: urgency-focused view answering "What needs attention today?"
+  - KPI cards: Requiring Action, Due in 7 Days, Overdue, Potential Exposure
+  - Action Required block: top 5 urgent cases with per-row CTAs (Generate Docs, Record Delivery, Export Packet)
+  - Deadline Radar mini: next 14 days, top 5 deadlines
+  - Recent Activity feed: compliance trail with audit events
+- `/cases` - Full case list (filing cabinet / CRM view) with filters
 - `/cases/new` - 3-step wizard (property → tenant → deposit)
 - `/cases/[id]` - Case workspace with 6-step workflow
+  - Document cards show "Saved" badge with generation date and version
+  - "Update" button (not "Regenerate") with "Previous versions kept" helper text
+  - Version locking when case is marked as Sent
+  - Proof Packet card as workflow climax
 - `/documents` - All generated documents
 - `/settings` - Profile, billing, reminders
 - `/coverage` - Request new jurisdictions
@@ -336,6 +344,7 @@ src/
 │   ├── supabase/
 │   │   ├── client.ts           # Browser Supabase client
 │   │   ├── server.ts           # Server Supabase client
+│   │   ├── admin.ts            # Admin client with service role key (for storage uploads)
 │   │   └── middleware.ts       # Auth middleware helper
 │   ├── auth.ts                 # getCurrentUser helper
 │   ├── db.ts                   # Prisma client
@@ -469,23 +478,39 @@ model Citation {
 **Frontend**
 - All pages styled and functional with Tailwind CSS v4 + shadcn/ui
 - Interactive landing page with address autocomplete demo
+- **Dashboard redesigned as "Action Center"** with urgency-focused UX:
+  - Action Required block with per-row CTAs
+  - Potential exposure calculations per case
+  - Recent Activity feed from audit events
 - Case workspace with all 6 MVP features integrated
+- **Document UX improvements**:
+  - "Saved" badge with generation date and version number
+  - "Update" button with versioning helper text
+  - Version locking when case marked as Sent
+  - Proof Packet card as workflow climax
 - Responsive design (mobile + desktop)
 - Domain components for deadlines, coverage, status
+- Beta badge support via feature flag
 
 **Backend**
 - Complete API layer with all CRUD operations
 - PDF generation for notice letters and itemized statements
-- File upload/download via Supabase Storage
+- File upload/download via Supabase Storage (using service role key)
+- Secure document downloads via signed URLs
 - Google Gemini AI integration for description improvement
 - Quality check and exposure calculator endpoints
+- Feedback collection API
 
 **Database & Auth**
 - **Supabase project**: `txziykaoatbqvihveasu` (West US)
 - **Database**: PostgreSQL with full Prisma schema deployed
 - **Authentication**: Supabase Auth with email/password
-- **Storage**: Supabase Storage bucket for attachments
+- **Storage**: Supabase Storage bucket `case-files` for attachments and documents
 - **Seed data**: 13 jurisdictions with rules (CA, NY, TX, WA, IL, CO, FL, MA + major cities)
+
+**Deployment**
+- **Production**: Deployed on Vercel
+- Environment variables configured (including `SUPABASE_SERVICE_ROLE_KEY`)
 
 **Documentation**
 - `README.md` - Project overview and setup
@@ -496,8 +521,7 @@ model Citation {
 - Real address validation/geocoding API
 - Email service for reminders (7/3/1 days)
 - Payment processing (Stripe)
-- Proof packet ZIP export
-- Production deployment (Vercel)
+- Proof packet ZIP export implementation
 
 ---
 
@@ -576,6 +600,7 @@ Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/api/cases/[id]/documents/generate` | Generate PDF (notice/itemized) |
+| GET | `/api/cases/[id]/documents/[documentId]/download` | Download document via signed URL |
 | GET | `/api/cases/[id]/attachments` | List attachments |
 | POST | `/api/cases/[id]/attachments` | Upload attachment |
 | DELETE | `/api/cases/[id]/attachments` | Delete attachment |
