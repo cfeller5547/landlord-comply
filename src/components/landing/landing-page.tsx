@@ -1418,6 +1418,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
               <Link href="/coverage" className="hover:text-foreground">Coverage</Link>
               <Link href="#methodology" className="hover:text-foreground">Methodology</Link>
               <Link href="#faq" className="hover:text-foreground">FAQ</Link>
+              <Link href="/contact" className="hover:text-foreground">Contact</Link>
               <Link href="/terms" className="hover:text-foreground">Terms</Link>
               <Link href="/privacy" className="hover:text-foreground">Privacy</Link>
             </div>

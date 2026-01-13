@@ -502,6 +502,7 @@ enum FeedbackType {
   PRAISE          // Positive feedback
   GENERAL         // General comment
   SURVEY          // Response to micro-survey
+  CONTACT         // Contact form submission
 }
 
 enum FeedbackCategory {
