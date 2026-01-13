@@ -14,7 +14,7 @@ const levels = {
 const level = () => {
   const env = config.stage || "development";
   const isDevelopment = env === "development";
-  return isDevelopment ? "debug" : "warn";
+  return isDevelopment ? "debug" : "info";
 };
 
 // Define colors for each level (for console output)
