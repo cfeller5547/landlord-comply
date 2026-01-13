@@ -70,14 +70,24 @@ export async function PATCH(
     }
 
     // Check blockers for certain transitions
+    // When marking as SENT, exclude items that will be auto-completed by the send action
+    const itemsToExcludeWhenSending = ["send to tenant", "record proof of delivery", "delivery method"];
+    const relevantBlockers = newStatus === "SENT"
+      ? caseData.checklistItems.filter(
+          (i) => !itemsToExcludeWhenSending.some(
+            (exclude) => i.label.toLowerCase().includes(exclude)
+          )
+        )
+      : caseData.checklistItems;
+
     if (
       (newStatus === "PENDING_SEND" || newStatus === "SENT") &&
-      caseData.checklistItems.length > 0
+      relevantBlockers.length > 0
     ) {
       return NextResponse.json(
         {
           error: "Cannot proceed - there are incomplete required checklist items",
-          blockers: caseData.checklistItems.map((i) => i.label),
+          blockers: relevantBlockers.map((i) => i.label),
         },
         { status: 400 }
       );
@@ -161,12 +171,17 @@ export async function PATCH(
       },
     });
 
-    // Auto-complete relevant checklist items
+    // Auto-complete relevant checklist items when marking as sent
     if (newStatus === "SENT") {
+      // Complete "Send to tenant(s)", "Record proof of delivery", and delivery method items
       await db.checklistItem.updateMany({
         where: {
           caseId,
-          label: { contains: "delivery method", mode: "insensitive" },
+          OR: [
+            { label: { contains: "send to tenant", mode: "insensitive" } },
+            { label: { contains: "record proof of delivery", mode: "insensitive" } },
+            { label: { contains: "delivery method", mode: "insensitive" } },
+          ],
         },
         data: { completed: true, completedAt: new Date() },
       });

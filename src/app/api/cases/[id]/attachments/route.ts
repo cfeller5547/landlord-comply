@@ -98,8 +98,23 @@ export async function POST(
       );
     }
 
+    // Parse tags early to determine file type
+    const tagArray = tags
+      ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+      : [];
+
     // Determine file type category - use Prisma enum values
-    const fileType = file.type.startsWith("image/") ? "PHOTO" : "OTHER";
+    // Check if this is a delivery proof upload
+    let fileType: "PHOTO" | "RECEIPT" | "INVOICE" | "CONTRACT" | "DELIVERY_PROOF" | "OTHER";
+    if (tagArray.includes("delivery_proof")) {
+      fileType = "DELIVERY_PROOF";
+    } else if (file.type.startsWith("image/")) {
+      fileType = "PHOTO";
+    } else if (file.type === "application/pdf") {
+      fileType = "OTHER"; // PDFs are OTHER by default, could be INVOICE, RECEIPT, etc.
+    } else {
+      fileType = "OTHER";
+    }
 
     // Generate unique filename
     const ext = file.name.split(".").pop() || "bin";
@@ -138,12 +153,7 @@ export async function POST(
 
     const fileUrl = urlData?.publicUrl || filePath;
 
-    // Parse tags
-    const tagArray = tags
-      ? tags.split(",").map((t) => t.trim()).filter(Boolean)
-      : [];
-
-    // Create attachment record
+    // Create attachment record (tagArray already parsed above)
     const attachment = await db.attachment.create({
       data: {
         caseId,

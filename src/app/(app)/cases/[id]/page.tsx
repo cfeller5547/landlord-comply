@@ -211,6 +211,7 @@ interface CaseData {
     type: string;
     fileUrl: string;
     uploadedAt: string;
+    tags?: string[];
   }>;
   checklistItems: Array<{
     id: string;
@@ -540,8 +541,9 @@ export default function CaseWorkspacePage() {
     }
 
     try {
+      // Filter delivery proof files by type or tags (for backwards compatibility)
       const deliveryProofIds = caseData?.attachments
-        .filter((a) => a.type === "DELIVERY_PROOF")
+        .filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof")) || (a.tags && a.tags.includes("delivery_proof")))
         .map((a) => a.id) || [];
 
       const res = await fetch(`/api/cases/${caseId}/status`, {
@@ -1544,12 +1546,12 @@ export default function CaseWorkspacePage() {
                         </p>
                       )}
                     </div>
-                    {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF").length > 0 && (
+                    {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof"))).length > 0 && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-2">Delivery Proof Files:</p>
                         <div className="flex flex-wrap gap-2">
                           {caseData.attachments
-                            .filter((a) => a.type === "DELIVERY_PROOF")
+                            .filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof")))
                             .map((proof) => (
                               <a
                                 key={proof.id}
@@ -1640,9 +1642,9 @@ export default function CaseWorkspacePage() {
                           Click to upload proof
                         </p>
                       </div>
-                      {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF").length > 0 && (
+                      {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof"))).length > 0 && (
                         <p className="text-xs text-green-600 mt-2">
-                          {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF").length} file(s) uploaded
+                          {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof"))).length} file(s) uploaded
                         </p>
                       )}
                     </div>
@@ -2023,9 +2025,9 @@ export default function CaseWorkspacePage() {
                           <Upload className="h-4 w-4 mr-2" />
                           Upload Proof
                         </Button>
-                        {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF").length > 0 && (
+                        {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof")) || (a.tags && a.tags.includes("delivery_proof"))).length > 0 && (
                           <p className="text-xs text-green-600 mt-2">
-                            {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF").length} delivery proof file(s) uploaded
+                            {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof")) || (a.tags && a.tags.includes("delivery_proof"))).length} delivery proof file(s) uploaded
                           </p>
                         )}
                       </div>
@@ -2250,7 +2252,7 @@ export default function CaseWorkspacePage() {
             {caseData?.attachments && caseData.attachments.length > 0 ? (
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {caseData.attachments
-                  .filter(att => att.type !== "DELIVERY_PROOF")
+                  .filter(att => att.type !== "DELIVERY_PROOF" && !(att.tags && att.tags.includes("delivery_proof")))
                   .map((att) => (
                     <label
                       key={att.id}
@@ -2507,7 +2509,7 @@ export default function CaseWorkspacePage() {
         deduction={selectedDeductionForEdit}
         attachments={caseData.attachments.map((a) => ({
           ...a,
-          tags: a.type === "DELIVERY_PROOF" ? ["delivery_proof"] : [],
+          tags: a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof")) ? ["delivery_proof"] : [],
         }))}
         isOpen={isDeductionDrawerOpen}
         onClose={handleCloseDeductionDrawer}
