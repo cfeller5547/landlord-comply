@@ -78,6 +78,8 @@ import {
   FileText,
   DollarSign,
   Image as ImageIcon,
+  Camera,
+  Receipt,
   Send,
   CheckCircle,
   BookOpen,
@@ -330,6 +332,12 @@ export default function CaseWorkspacePage() {
   // Deduction drawer state
   const [selectedDeductionForEdit, setSelectedDeductionForEdit] = useState<Deduction | null>(null);
   const [isDeductionDrawerOpen, setIsDeductionDrawerOpen] = useState(false);
+
+  // Evidence linking dialog state
+  const [showEvidenceLinkDialog, setShowEvidenceLinkDialog] = useState(false);
+  const [evidenceLinkDeductionId, setEvidenceLinkDeductionId] = useState<string | null>(null);
+  const [selectedAttachmentIds, setSelectedAttachmentIds] = useState<string[]>([]);
+  const [linkingEvidence, setLinkingEvidence] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const deliveryProofInputRef = useRef<HTMLInputElement>(null);
@@ -622,7 +630,7 @@ export default function CaseWorkspacePage() {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          id: selectedDeduction.id,
+          deductionId: selectedDeduction.id,
           description: aiResult.description,
           aiGenerated: true,
           originalDescription: selectedDeduction.originalDescription || selectedDeduction.description,
@@ -733,12 +741,42 @@ export default function CaseWorkspacePage() {
     setSelectedDeductionForEdit(null);
   };
 
-  // Attach evidence to deduction (opens file picker)
+  // Attach evidence to deduction - opens linking dialog
   const handleAttachEvidenceToDeduction = (deductionId: string) => {
-    // Store the deduction ID for when file is uploaded
-    // For now, just trigger file upload - evidence linking would need a backend enhancement
-    fileInputRef.current?.click();
-    toast.info("Upload evidence, then link it to this deduction in the drawer");
+    // Find current deduction to pre-select its existing attachments
+    const deduction = caseData?.deductions.find(d => d.id === deductionId);
+    setEvidenceLinkDeductionId(deductionId);
+    setSelectedAttachmentIds(deduction?.attachmentIds || []);
+    setShowEvidenceLinkDialog(true);
+  };
+
+  // Link selected attachments to deduction
+  const handleLinkEvidenceToDeduction = async () => {
+    if (!evidenceLinkDeductionId) return;
+
+    setLinkingEvidence(true);
+    try {
+      const res = await fetch(`/api/cases/${caseId}/deductions`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          deductionId: evidenceLinkDeductionId,
+          attachmentIds: selectedAttachmentIds,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Failed to link evidence");
+
+      toast.success("Evidence linked to deduction");
+      setShowEvidenceLinkDialog(false);
+      setEvidenceLinkDeductionId(null);
+      setSelectedAttachmentIds([]);
+      await fetchCase();
+    } catch (err) {
+      toast.error("Failed to link evidence");
+    } finally {
+      setLinkingEvidence(false);
+    }
   };
 
   if (loading) {
@@ -1612,7 +1650,9 @@ export default function CaseWorkspacePage() {
                     {/* Show warning if case isn't ready */}
                     {(() => {
                       const hasNoticeLetter = caseData.documents.some((d) => d.type === "NOTICE_LETTER");
-                      const hasBlockers = qualityCheck?.blockers && qualityCheck.blockers.length > 0;
+                      // Exclude delivery_method from blockers since user provides it in this form
+                      const relevantBlockers = qualityCheck?.blockers?.filter(b => b.id !== "delivery_method") || [];
+                      const hasBlockers = relevantBlockers.length > 0;
                       const isReady = hasNoticeLetter && !hasBlockers;
 
                       if (!isReady) {
@@ -1624,7 +1664,7 @@ export default function CaseWorkspacePage() {
                                 <p className="font-medium text-yellow-800">Not ready to send yet</p>
                                 <ul className="mt-1 text-yellow-700 space-y-0.5">
                                   {!hasNoticeLetter && <li>• Generate Notice Letter first</li>}
-                                  {hasBlockers && qualityCheck?.blockers.map((b) => (
+                                  {hasBlockers && relevantBlockers.map((b) => (
                                     <li key={b.id}>• {b.label}</li>
                                   ))}
                                 </ul>
@@ -1644,7 +1684,8 @@ export default function CaseWorkspacePage() {
                         !sendForm.deliveryMethod ||
                         !sendForm.sentDate ||
                         !caseData.documents.some((d) => d.type === "NOTICE_LETTER") ||
-                        (qualityCheck?.blockers && qualityCheck.blockers.length > 0)
+                        // Exclude delivery_method from blockers since user provides it in the form
+                        (qualityCheck?.blockers && qualityCheck.blockers.filter(b => b.id !== "delivery_method").length > 0)
                       }
                     >
                       <Check className="h-4 w-4 mr-2" />
@@ -2179,6 +2220,125 @@ export default function CaseWorkspacePage() {
                 </Button>
               </>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Evidence Linking Dialog */}
+      <Dialog
+        open={showEvidenceLinkDialog}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowEvidenceLinkDialog(false);
+            setEvidenceLinkDeductionId(null);
+            setSelectedAttachmentIds([]);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5 text-primary" />
+              Link Evidence to Deduction
+            </DialogTitle>
+            <DialogDescription>
+              Select files from your case attachments to link as evidence for this deduction.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {caseData?.attachments && caseData.attachments.length > 0 ? (
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {caseData.attachments
+                  .filter(att => att.type !== "DELIVERY_PROOF")
+                  .map((att) => (
+                    <label
+                      key={att.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors",
+                        selectedAttachmentIds.includes(att.id)
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      )}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedAttachmentIds.includes(att.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedAttachmentIds([...selectedAttachmentIds, att.id]);
+                          } else {
+                            setSelectedAttachmentIds(selectedAttachmentIds.filter(id => id !== att.id));
+                          }
+                        }}
+                        className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{att.name}</p>
+                        <p className="text-xs text-muted-foreground capitalize">
+                          {att.type.toLowerCase().replace(/_/g, " ")}
+                        </p>
+                      </div>
+                      {att.type === "PHOTO" && (
+                        <Camera className="h-4 w-4 text-blue-500 flex-shrink-0" />
+                      )}
+                      {(att.type === "INVOICE" || att.type === "RECEIPT") && (
+                        <Receipt className="h-4 w-4 text-green-500 flex-shrink-0" />
+                      )}
+                      {att.type === "INSPECTION" && (
+                        <FileText className="h-4 w-4 text-orange-500 flex-shrink-0" />
+                      )}
+                    </label>
+                  ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                <Upload className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+                <p className="text-sm text-muted-foreground mb-3">
+                  No attachments uploaded yet
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setShowEvidenceLinkDialog(false);
+                    fileInputRef.current?.click();
+                  }}
+                >
+                  Upload Files First
+                </Button>
+              </div>
+            )}
+
+            {selectedAttachmentIds.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                {selectedAttachmentIds.length} file{selectedAttachmentIds.length !== 1 ? "s" : ""} selected
+              </p>
+            )}
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEvidenceLinkDialog(false);
+                setEvidenceLinkDeductionId(null);
+                setSelectedAttachmentIds([]);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleLinkEvidenceToDeduction}
+              disabled={linkingEvidence || selectedAttachmentIds.length === 0}
+            >
+              {linkingEvidence ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <CheckCircle className="h-4 w-4 mr-2" />
+              )}
+              Link {selectedAttachmentIds.length || ""} File{selectedAttachmentIds.length !== 1 ? "s" : ""}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
