@@ -21,11 +21,12 @@ import { useState } from "react";
 import { UserMenu } from "./user-menu";
 import { config } from "@/lib/config";
 
+// Simplified navigation - users live in Cases
+// Documents are accessed in-case, Coverage is reference-only
 const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Cases", href: "/cases", icon: Briefcase },
   { name: "Coverage", href: "/coverage", icon: Globe },
-  { name: "Documents", href: "/documents", icon: FileText },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 

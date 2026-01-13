@@ -57,6 +57,9 @@ import {
   CoverageBadge,
   StatusBadge,
   TrustBanner,
+  CaseProgress,
+  calculateWorkflowSteps,
+  calculateConfidence,
 } from "@/components/domain";
 import {
   CaseCreatedSurvey,
@@ -98,6 +101,8 @@ import {
   Info,
   Calculator,
   ArrowRight,
+  Eye,
+  SkipForward,
 } from "lucide-react";
 
 // Types
@@ -833,49 +838,19 @@ export default function CaseWorkspacePage() {
         </Collapsible>
       )}
 
-      {/* Quality Check Banner */}
-      {qualityCheck && !isClosed && (
-        <Card className={cn(
-          "mb-6",
-          qualityCheck.ready
-            ? "border-green-300 bg-green-50"
-            : "border-yellow-300 bg-yellow-50"
-        )}>
-          <CardHeader className="py-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                {qualityCheck.ready ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
-                ) : (
-                  <AlertTriangle className="h-5 w-5 text-yellow-600" />
-                )}
-                <div>
-                  <CardTitle className="text-base">
-                    {qualityCheck.ready
-                      ? "Ready to Send"
-                      : `Fix ${qualityCheck.blockers.length} issue(s) before sending`}
-                  </CardTitle>
-                  <CardDescription>
-                    Quality score: {qualityCheck.score}% |{" "}
-                    {qualityCheck.checks.filter((c) => c.passed).length}/{qualityCheck.checks.length} checks passed
-                  </CardDescription>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                {qualityCheck.blockers.map((blocker) => (
-                  <Badge key={blocker.id} variant="destructive" className="text-xs">
-                    {blocker.label}
-                  </Badge>
-                ))}
-                {qualityCheck.warnings.slice(0, 2).map((warning) => (
-                  <Badge key={warning.id} variant="outline" className="text-xs border-yellow-500 text-yellow-700">
-                    {warning.label}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          </CardHeader>
-        </Card>
+      {/* Guided Workflow Progress */}
+      {!isClosed && (
+        <CaseProgress
+          steps={calculateWorkflowSteps(caseData)}
+          confidenceLevel={calculateConfidence(qualityCheck, daysUntilDeadline).level}
+          confidenceMessage={calculateConfidence(qualityCheck, daysUntilDeadline).message}
+          daysLeft={daysUntilDeadline}
+          dueDate={new Date(caseData.dueDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        />
       )}
 
       <div className="grid lg:grid-cols-3 gap-6">
@@ -894,61 +869,153 @@ export default function CaseWorkspacePage() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
+                {/* Notice Letter */}
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">Notice Letter</h4>
                     {caseData.documents.some((d) => d.type === "NOTICE_LETTER") && (
                       <Badge variant="outline" className="text-green-600 border-green-600">
-                        Generated
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Ready
                       </Badge>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
                     Official notice to tenant with deposit disposition
                   </p>
-                  <Button
-                    onClick={() => handleGeneratePdf("notice_letter")}
-                    disabled={generatingPdf !== null || isClosed}
-                    className="w-full"
-                  >
-                    {generatingPdf === "notice_letter" ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <FileDown className="h-4 w-4 mr-2" />
-                    )}
-                    {caseData.documents.some((d) => d.type === "NOTICE_LETTER")
-                      ? "Regenerate"
-                      : "Generate"}
-                  </Button>
+                  {caseData.documents.some((d) => d.type === "NOTICE_LETTER") ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          className="flex-1"
+                          onClick={() => {
+                            const doc = caseData.documents.find((d) => d.type === "NOTICE_LETTER");
+                            if (doc?.fileUrl) window.open(doc.fileUrl, "_blank");
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Preview
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const doc = caseData.documents.find((d) => d.type === "NOTICE_LETTER");
+                            if (doc?.fileUrl) {
+                              const a = document.createElement("a");
+                              a.href = doc.fileUrl;
+                              a.download = "notice-letter.pdf";
+                              a.click();
+                            }
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-muted-foreground"
+                        onClick={() => handleGeneratePdf("notice_letter")}
+                        disabled={generatingPdf !== null || isClosed}
+                      >
+                        {generatingPdf === "notice_letter" ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <FileDown className="h-3 w-3 mr-1" />
+                        )}
+                        Regenerate
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => handleGeneratePdf("notice_letter")}
+                      disabled={generatingPdf !== null || isClosed}
+                      className="w-full"
+                    >
+                      {generatingPdf === "notice_letter" ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <FileDown className="h-4 w-4 mr-2" />
+                      )}
+                      Generate
+                    </Button>
+                  )}
                 </div>
 
+                {/* Itemized Statement */}
                 <div className="p-4 border rounded-lg">
                   <div className="flex items-center justify-between mb-2">
                     <h4 className="font-medium">Itemized Statement</h4>
                     {caseData.documents.some((d) => d.type === "ITEMIZED_STATEMENT") && (
                       <Badge variant="outline" className="text-green-600 border-green-600">
-                        Generated
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        Ready
                       </Badge>
                     )}
                   </div>
                   <p className="text-sm text-muted-foreground mb-3">
                     Detailed breakdown of all deductions
                   </p>
-                  <Button
-                    onClick={() => handleGeneratePdf("itemized_statement")}
-                    disabled={generatingPdf !== null || isClosed}
-                    variant="outline"
-                    className="w-full"
-                  >
-                    {generatingPdf === "itemized_statement" ? (
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    ) : (
-                      <FileDown className="h-4 w-4 mr-2" />
-                    )}
-                    {caseData.documents.some((d) => d.type === "ITEMIZED_STATEMENT")
-                      ? "Regenerate"
-                      : "Generate"}
-                  </Button>
+                  {caseData.documents.some((d) => d.type === "ITEMIZED_STATEMENT") ? (
+                    <div className="space-y-2">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="default"
+                          className="flex-1"
+                          onClick={() => {
+                            const doc = caseData.documents.find((d) => d.type === "ITEMIZED_STATEMENT");
+                            if (doc?.fileUrl) window.open(doc.fileUrl, "_blank");
+                          }}
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          Preview
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            const doc = caseData.documents.find((d) => d.type === "ITEMIZED_STATEMENT");
+                            if (doc?.fileUrl) {
+                              const a = document.createElement("a");
+                              a.href = doc.fileUrl;
+                              a.download = "itemized-statement.pdf";
+                              a.click();
+                            }
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full text-muted-foreground"
+                        onClick={() => handleGeneratePdf("itemized_statement")}
+                        disabled={generatingPdf !== null || isClosed}
+                      >
+                        {generatingPdf === "itemized_statement" ? (
+                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                        ) : (
+                          <FileDown className="h-3 w-3 mr-1" />
+                        )}
+                        Regenerate
+                      </Button>
+                    </div>
+                  ) : (
+                    <Button
+                      onClick={() => handleGeneratePdf("itemized_statement")}
+                      disabled={generatingPdf !== null || isClosed}
+                      variant="outline"
+                      className="w-full"
+                    >
+                      {generatingPdf === "itemized_statement" ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <FileDown className="h-4 w-4 mr-2" />
+                      )}
+                      Generate
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
@@ -976,16 +1043,23 @@ export default function CaseWorkspacePage() {
             <CardContent>
               {caseData.deductions.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground mb-4">No deductions added yet</p>
+                  <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-muted mb-4">
+                    <DollarSign className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-muted-foreground mb-2">No deductions added yet</p>
+                  <p className="text-sm text-muted-foreground mb-4 max-w-sm mx-auto">
+                    <span className="inline-flex items-center gap-1 text-green-600">
+                      <SkipForward className="h-3.5 w-3.5" />
+                      Returning the full deposit?
+                    </span>{" "}
+                    You can skip this section and proceed to generate documents.
+                  </p>
                   {!isClosed && (
-                    <Button onClick={() => {
-                        const deductionSection = document.getElementById('deductions-section');
-                        // In a real implementation, this would open a dialog or scroll to the form
-                        // For now, we'll just alert as placeholder since the form isn't in the snippet
-                        alert("Use the form below to add a deduction (if implemented) or use the 'Add Deduction' button in the sidebar if available.");
+                    <Button variant="outline" onClick={() => {
+                        toast.info("Add deduction feature - click the + Add Deduction button to add one");
                     }}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Add First Deduction
+                      Add Deduction
                     </Button>
                   )}
                 </div>
@@ -1228,6 +1302,166 @@ export default function CaseWorkspacePage() {
               )}
             </CardContent>
           </Card>
+
+          {/* Delivery Proof Section - Dedicated Step */}
+          {caseData.status !== "CLOSED" && (
+            <Card className={cn(
+              caseData.documents.some((d) => d.type === "NOTICE_LETTER") && !caseData.sentDate
+                ? "border-primary/50 shadow-sm"
+                : ""
+            )}>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Send className="h-5 w-5" />
+                      Record Delivery
+                    </CardTitle>
+                    <CardDescription>
+                      Prove you sent it correctly — your strongest protection
+                    </CardDescription>
+                  </div>
+                  {caseData.sentDate && (
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Sent
+                    </Badge>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent>
+                {caseData.sentDate ? (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                      <p className="text-sm text-green-800">
+                        Sent on {new Date(caseData.sentDate).toLocaleDateString()} via{" "}
+                        <span className="font-medium capitalize">
+                          {caseData.deliveryMethod?.replace("_", " ") || "mail"}
+                        </span>
+                      </p>
+                      {caseData.trackingNumber && (
+                        <p className="text-xs text-green-700 mt-1">
+                          Tracking: {caseData.trackingNumber}
+                        </p>
+                      )}
+                    </div>
+                    {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF").length > 0 && (
+                      <div>
+                        <p className="text-xs text-muted-foreground mb-2">Delivery Proof Files:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {caseData.attachments
+                            .filter((a) => a.type === "DELIVERY_PROOF")
+                            .map((proof) => (
+                              <a
+                                key={proof.id}
+                                href={proof.fileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs bg-muted px-2 py-1 rounded hover:bg-muted/80"
+                              >
+                                <FileText className="h-3 w-3" />
+                                {proof.name}
+                              </a>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Delivery Method *</Label>
+                        <Select
+                          value={sendForm.deliveryMethod}
+                          onValueChange={(value) =>
+                            setSendForm({ ...sendForm, deliveryMethod: value })
+                          }
+                        >
+                          <SelectTrigger className="mt-1.5">
+                            <SelectValue placeholder="Select method" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {caseData.ruleSet.allowedDeliveryMethods.map((method) => (
+                              <SelectItem key={method} value={method}>
+                                {method.replace("_", " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Date Sent *</Label>
+                        <Input
+                          type="date"
+                          className="mt-1.5"
+                          value={sendForm.sentDate}
+                          onChange={(e) =>
+                            setSendForm({ ...sendForm, sentDate: e.target.value })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Delivery Address</Label>
+                      <Input
+                        className="mt-1.5"
+                        value={sendForm.deliveryAddress}
+                        onChange={(e) =>
+                          setSendForm({ ...sendForm, deliveryAddress: e.target.value })
+                        }
+                        placeholder={primaryTenant?.forwardingAddress || "Enter delivery address"}
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Tracking Number (optional)</Label>
+                      <Input
+                        className="mt-1.5"
+                        value={sendForm.trackingNumber}
+                        onChange={(e) =>
+                          setSendForm({ ...sendForm, trackingNumber: e.target.value })
+                        }
+                        placeholder="USPS, FedEx, UPS tracking"
+                      />
+                    </div>
+
+                    <div>
+                      <Label>Upload Delivery Proof</Label>
+                      <p className="text-xs text-muted-foreground mb-2">
+                        USPS receipt, certified mail slip, email confirmation, etc.
+                      </p>
+                      <div
+                        className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary hover:bg-muted/50 transition-colors"
+                        onClick={() => deliveryProofInputRef.current?.click()}
+                      >
+                        <Upload className="h-6 w-6 mx-auto text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground mt-1">
+                          Click to upload proof
+                        </p>
+                      </div>
+                      {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF").length > 0 && (
+                        <p className="text-xs text-green-600 mt-2">
+                          {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF").length} file(s) uploaded
+                        </p>
+                      )}
+                    </div>
+
+                    <Button
+                      className="w-full"
+                      size="lg"
+                      onClick={handleMarkAsSent}
+                      disabled={!sendForm.deliveryMethod || !sendForm.sentDate}
+                    >
+                      <Check className="h-4 w-4 mr-2" />
+                      Confirm Sent
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Right Column - Sidebar */}
