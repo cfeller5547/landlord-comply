@@ -1862,7 +1862,7 @@ export default function CaseWorkspacePage() {
 
               {/* Add custom checklist item */}
               {!isClosed && (
-                <div className="mt-3 pt-3 border-t">
+                <div className="mt-3 pt-3 border-t space-y-3">
                   <form
                     onSubmit={async (e) => {
                       e.preventDefault();
@@ -1895,6 +1895,9 @@ export default function CaseWorkspacePage() {
                       <Plus className="h-3 w-3" />
                     </Button>
                   </form>
+                  <p className="text-xs text-muted-foreground">
+                    Tip: Click any checkbox to mark items complete if done outside the system.
+                  </p>
                 </div>
               )}
             </CardContent>
@@ -2025,10 +2028,30 @@ export default function CaseWorkspacePage() {
                           <Upload className="h-4 w-4 mr-2" />
                           Upload Proof
                         </Button>
-                        {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof")) || (a.tags && a.tags.includes("delivery_proof"))).length > 0 && (
-                          <p className="text-xs text-green-600 mt-2">
-                            {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof")) || (a.tags && a.tags.includes("delivery_proof"))).length} delivery proof file(s) uploaded
-                          </p>
+                        {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof"))).length > 0 && (
+                          <div className="mt-3 space-y-2">
+                            <p className="text-xs text-green-600 flex items-center gap-1">
+                              <Check className="h-3 w-3" />
+                              {caseData.attachments.filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof"))).length} delivery proof file(s) uploaded
+                            </p>
+                            <div className="flex flex-wrap gap-2">
+                              {caseData.attachments
+                                .filter((a) => a.type === "DELIVERY_PROOF" || (a.tags && a.tags.includes("delivery_proof")))
+                                .map((proof) => (
+                                  <a
+                                    key={proof.id}
+                                    href={proof.fileUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-1 rounded hover:bg-green-100"
+                                  >
+                                    <FileText className="h-3 w-3" />
+                                    {proof.name}
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                ))}
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
