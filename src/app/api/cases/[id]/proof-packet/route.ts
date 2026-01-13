@@ -245,7 +245,7 @@ export async function GET(
     });
 
     console.log(`[ProofPacket] Sending response...`);
-    return new NextResponse(zipBuffer, {
+    return new NextResponse(new Uint8Array(zipBuffer), {
       headers: {
         "Content-Type": "application/zip",
         "Content-Disposition": `attachment; filename="${filename}"`,
