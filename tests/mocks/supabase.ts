@@ -16,6 +16,23 @@ export const mockSupabaseUser = {
 };
 
 /**
+ * Mock storage bucket operations
+ */
+export const mockStorageBucket = {
+  upload: vi.fn().mockResolvedValue({ data: { path: "test-path" }, error: null }),
+  download: vi.fn().mockResolvedValue({ data: new Blob(["test"]), error: null }),
+  getPublicUrl: vi.fn().mockReturnValue({
+    data: { publicUrl: "https://test.supabase.co/storage/v1/object/public/case-files/test-path" },
+  }),
+  createSignedUrl: vi.fn().mockResolvedValue({
+    data: { signedUrl: "https://test.supabase.co/storage/v1/object/sign/case-files/test-path?token=abc123" },
+    error: null,
+  }),
+  remove: vi.fn().mockResolvedValue({ data: [], error: null }),
+  list: vi.fn().mockResolvedValue({ data: [], error: null }),
+};
+
+/**
  * Mock Supabase client
  */
 export const mockSupabaseClient = {
@@ -41,14 +58,16 @@ export const mockSupabaseClient = {
     }),
   },
   storage: {
-    from: vi.fn().mockReturnValue({
-      upload: vi.fn().mockResolvedValue({ data: { path: "test-path" }, error: null }),
-      download: vi.fn().mockResolvedValue({ data: new Blob(), error: null }),
-      getPublicUrl: vi.fn().mockReturnValue({
-        data: { publicUrl: "https://test.supabase.co/storage/test-path" },
-      }),
-      remove: vi.fn().mockResolvedValue({ data: [], error: null }),
-    }),
+    from: vi.fn().mockReturnValue(mockStorageBucket),
+  },
+};
+
+/**
+ * Mock admin Supabase client (for server-side operations with service role)
+ */
+export const mockAdminSupabaseClient = {
+  storage: {
+    from: vi.fn().mockReturnValue(mockStorageBucket),
   },
 };
 
@@ -60,6 +79,11 @@ vi.mock("@/lib/supabase/server", () => ({
 // Mock the Supabase browser client
 vi.mock("@/lib/supabase/client", () => ({
   createClient: vi.fn().mockReturnValue(mockSupabaseClient),
+}));
+
+// Mock the Supabase admin client
+vi.mock("@/lib/supabase/admin", () => ({
+  createAdminClient: vi.fn().mockReturnValue(mockAdminSupabaseClient),
 }));
 
 /**
@@ -103,9 +127,65 @@ export const supabaseMockHelpers = {
   },
 
   /**
+   * Mock successful storage upload
+   */
+  mockStorageUploadSuccess: (path = "test-path") => {
+    mockStorageBucket.upload.mockResolvedValue({ data: { path }, error: null });
+    mockStorageBucket.getPublicUrl.mockReturnValue({
+      data: { publicUrl: `https://test.supabase.co/storage/v1/object/public/case-files/${path}` },
+    });
+  },
+
+  /**
+   * Mock storage upload failure
+   */
+  mockStorageUploadError: (message = "Upload failed") => {
+    mockStorageBucket.upload.mockResolvedValue({ data: null, error: { message } });
+  },
+
+  /**
+   * Mock successful signed URL generation
+   */
+  mockSignedUrlSuccess: (signedUrl = "https://test.supabase.co/storage/v1/object/sign/case-files/test-path?token=abc123") => {
+    mockStorageBucket.createSignedUrl.mockResolvedValue({
+      data: { signedUrl },
+      error: null,
+    });
+  },
+
+  /**
+   * Mock signed URL generation failure
+   */
+  mockSignedUrlError: (message = "File not found in bucket") => {
+    mockStorageBucket.createSignedUrl.mockResolvedValue({
+      data: null,
+      error: { message },
+    });
+  },
+
+  /**
+   * Get the current mock storage bucket for assertions
+   */
+  getStorageBucket: () => mockStorageBucket,
+
+  /**
    * Reset all Supabase mocks to default state
    */
   resetMocks: () => {
+    // Reset storage bucket mocks to defaults
+    mockStorageBucket.upload.mockResolvedValue({ data: { path: "test-path" }, error: null });
+    mockStorageBucket.download.mockResolvedValue({ data: new Blob(["test"]), error: null });
+    mockStorageBucket.getPublicUrl.mockReturnValue({
+      data: { publicUrl: "https://test.supabase.co/storage/v1/object/public/case-files/test-path" },
+    });
+    mockStorageBucket.createSignedUrl.mockResolvedValue({
+      data: { signedUrl: "https://test.supabase.co/storage/v1/object/sign/case-files/test-path?token=abc123" },
+      error: null,
+    });
+    mockStorageBucket.remove.mockResolvedValue({ data: [], error: null });
+    mockStorageBucket.list.mockResolvedValue({ data: [], error: null });
+
+    // Reset auth mocks to default authenticated user
     mockSupabaseClient.auth.getUser.mockResolvedValue({
       data: { user: mockSupabaseUser },
       error: null,
@@ -114,5 +194,9 @@ export const supabaseMockHelpers = {
       data: { session: { user: mockSupabaseUser } },
       error: null,
     });
+    
+    // Reset storage.from mocks
+    mockSupabaseClient.storage.from.mockReturnValue(mockStorageBucket);
+    mockAdminSupabaseClient.storage.from.mockReturnValue(mockStorageBucket);
   },
 };

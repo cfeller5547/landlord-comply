@@ -1,9 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-// Test mocks intentionally use 'any' for flexibility in mocking database responses
+/**
+ * Integration tests for jurisdictions API endpoint
+ *
+ * Tests cover:
+ * - GET /api/jurisdictions/lookup - Lookup jurisdiction by state/city
+ * - GET /api/jurisdictions - List all jurisdictions
+ */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { GET } from "@/app/api/jurisdictions/lookup/route";
 import { prismaMock } from "../../mocks/prisma";
+import "../../mocks/supabase";
+import "../../mocks/logger";
+
+// Mock the auth module
+vi.mock("@/lib/auth", () => ({
+  getDbUser: vi.fn(),
+  getCurrentUser: vi.fn(),
+}));
+
+// Import test fixtures
 import {
   californiaJurisdiction,
   sanFranciscoJurisdiction,
@@ -11,18 +26,17 @@ import {
   sanFranciscoRuleSet,
 } from "../../fixtures/jurisdictions";
 
-// Mock the auth module
-vi.mock("@/lib/auth", () => ({
-  getDbUser: vi.fn().mockResolvedValue({ id: "test-user-id" }),
-  getCurrentUser: vi.fn().mockResolvedValue({ id: "test-user-id" }),
-}));
-
 describe("GET /api/jurisdictions/lookup", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { getDbUser, getCurrentUser } = await import("@/lib/auth");
+    vi.mocked(getDbUser).mockResolvedValue({ id: "test-user-id" });
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: "test-user-id" });
   });
 
   it("should return 400 when state is missing", async () => {
+    const { GET } = await import("@/app/api/jurisdictions/lookup/route");
+
     const request = new Request("http://localhost/api/jurisdictions/lookup");
 
     const response = await GET(request);
@@ -38,6 +52,8 @@ describe("GET /api/jurisdictions/lookup", () => {
       ...sanFranciscoJurisdiction,
       ruleSets: [sanFranciscoRuleSet],
     } as any);
+
+    const { GET } = await import("@/app/api/jurisdictions/lookup/route");
 
     const request = new Request(
       "http://localhost/api/jurisdictions/lookup?state=CA&city=San Francisco"
@@ -62,6 +78,8 @@ describe("GET /api/jurisdictions/lookup", () => {
       ruleSets: [californiaRuleSet],
     } as any);
 
+    const { GET } = await import("@/app/api/jurisdictions/lookup/route");
+
     const request = new Request(
       "http://localhost/api/jurisdictions/lookup?state=CA&city=Unknown City"
     );
@@ -80,6 +98,8 @@ describe("GET /api/jurisdictions/lookup", () => {
     // Both city and state lookups return null
     prismaMock.jurisdiction.findFirst.mockResolvedValue(null);
 
+    const { GET } = await import("@/app/api/jurisdictions/lookup/route");
+
     const request = new Request(
       "http://localhost/api/jurisdictions/lookup?state=ZZ"
     );
@@ -97,6 +117,8 @@ describe("GET /api/jurisdictions/lookup", () => {
       ruleSets: [sanFranciscoRuleSet],
     } as any);
 
+    const { GET } = await import("@/app/api/jurisdictions/lookup/route");
+
     const request = new Request(
       "http://localhost/api/jurisdictions/lookup?state=CA&city=san francisco"
     );
@@ -112,6 +134,8 @@ describe("GET /api/jurisdictions/lookup", () => {
       ...californiaJurisdiction,
       ruleSets: [californiaRuleSet],
     } as any);
+
+    const { GET } = await import("@/app/api/jurisdictions/lookup/route");
 
     const request = new Request(
       "http://localhost/api/jurisdictions/lookup?state=CA"
@@ -130,6 +154,8 @@ describe("GET /api/jurisdictions/lookup", () => {
       ruleSets: [californiaRuleSet],
     } as any);
 
+    const { GET } = await import("@/app/api/jurisdictions/lookup/route");
+
     const request = new Request(
       "http://localhost/api/jurisdictions/lookup?state=CA"
     );
@@ -145,9 +171,26 @@ describe("GET /api/jurisdictions/lookup", () => {
 });
 
 describe("GET /api/jurisdictions", () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks();
+    const { getDbUser, getCurrentUser } = await import("@/lib/auth");
+    vi.mocked(getDbUser).mockResolvedValue({ id: "test-user-id" });
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: "test-user-id" });
   });
 
-  // Additional tests for listing all jurisdictions could go here
+  it("should list all jurisdictions", async () => {
+    prismaMock.jurisdiction.findMany.mockResolvedValue([
+      californiaJurisdiction,
+      sanFranciscoJurisdiction,
+    ] as any);
+
+    const { GET } = await import("@/app/api/jurisdictions/route");
+
+    const request = new Request("http://localhost/api/jurisdictions");
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    const data = await response.json();
+    expect(Array.isArray(data)).toBe(true);
+  });
 });

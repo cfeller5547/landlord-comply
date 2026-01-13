@@ -1,15 +1,23 @@
 import "@testing-library/jest-dom/vitest";
-import { afterEach, vi } from "vitest";
+import { afterEach, vi, beforeAll } from "vitest";
 import { cleanup } from "@testing-library/react";
 
-// Mock environment variables
+// Mock environment variables BEFORE any module imports
 vi.stubEnv("DATABASE_URL", "postgresql://test:test@localhost:5432/test");
 vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://test.supabase.co");
 vi.stubEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", "test-anon-key");
+vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "test-service-role-key");
+vi.stubEnv("NEXT_PUBLIC_APP_STAGE", "development");
+
+// Import mocks - these set up vi.mock calls
+import "../mocks/prisma";
+import "../mocks/supabase";
+import "../mocks/logger";
 
 // Cleanup after each test
 afterEach(() => {
   cleanup();
+  vi.clearAllMocks();
 });
 
 // Mock window.matchMedia for component tests
@@ -41,5 +49,9 @@ global.IntersectionObserver = vi.fn().mockImplementation(() => ({
   disconnect: vi.fn(),
 }));
 
-// Suppress console errors in tests (optional - remove if you want to see them)
-// vi.spyOn(console, 'error').mockImplementation(() => {});
+// Suppress console.warn and console.error in tests for cleaner output
+// Comment these out if you need to debug test output
+beforeAll(() => {
+  vi.spyOn(console, 'warn').mockImplementation(() => {});
+  vi.spyOn(console, 'error').mockImplementation(() => {});
+});

@@ -12,11 +12,9 @@ export default defineConfig({
     setupFiles: ["./tests/setup/vitest.setup.ts"],
 
     // Include patterns
-    // Note: Integration tests require additional setup for database mocking
-    // They can be run separately with: npm run test:integration
     include: [
       "tests/unit/**/*.test.{ts,tsx}",
-      // "tests/integration/**/*.test.ts", // Uncomment when db mocking is ready
+      "tests/integration/**/*.test.ts",
     ],
 
     // Exclude patterns
