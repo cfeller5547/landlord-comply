@@ -101,12 +101,32 @@ export async function GET(
     // Create ZIP archive
     console.log(`[ProofPacket] Initializing ZIP archive...`);
     const archive = archiver("zip", { zlib: { level: 9 } });
-    const chunks: Buffer[] = [];
-
-    archive.on("data", (chunk) => chunks.push(chunk));
-    archive.on("error", (err) => {
-      console.error(`[ProofPacket] Archiver error:`, err);
-      throw err;
+    
+    // Create a promise that resolves with the complete buffer when the archive is finished
+    const archiveBufferPromise = new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      
+      archive.on("data", (chunk) => chunks.push(chunk));
+      
+      archive.on("error", (err) => {
+        console.error(`[ProofPacket] Archiver error:`, err);
+        reject(err);
+      });
+      
+      archive.on("end", () => {
+        console.log(`[ProofPacket] Archiver stream ended. chunks: ${chunks.length}`);
+        resolve(Buffer.concat(chunks));
+      });
+      
+      archive.on("warning", (err) => {
+        console.warn(`[ProofPacket] Archiver warning:`, err);
+        if (err.code === "ENOENT") {
+          // log warning
+        } else {
+          // throw error
+          reject(err);
+        }
+      });
     });
 
     // 1. Add Case Summary
@@ -196,10 +216,10 @@ export async function GET(
     console.log(`[ProofPacket] Finalizing archive...`);
     await archive.finalize();
 
-    // Wait for all chunks
-    await new Promise<void>((resolve) => archive.on("end", resolve));
+    // Wait for the stream to finish and get the buffer
+    console.log(`[ProofPacket] Waiting for archive stream to end...`);
+    const zipBuffer = await archiveBufferPromise;
     
-    const zipBuffer = Buffer.concat(chunks);
     console.log(`[ProofPacket] Archive generated. Total size: ${zipBuffer.length} bytes. Time taken: ${Date.now() - startTime}ms`);
 
     // Generate filename
