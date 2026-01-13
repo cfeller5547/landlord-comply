@@ -60,6 +60,8 @@ import {
   CaseProgress,
   calculateWorkflowSteps,
   calculateConfidence,
+  DeductionDrawer,
+  DeductionRow,
 } from "@/components/domain";
 import {
   CaseCreatedSurvey,
@@ -321,6 +323,10 @@ export default function CaseWorkspacePage() {
     amount: "",
     notes: "",
   });
+
+  // Deduction drawer state
+  const [selectedDeductionForEdit, setSelectedDeductionForEdit] = useState<Deduction | null>(null);
+  const [isDeductionDrawerOpen, setIsDeductionDrawerOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const deliveryProofInputRef = useRef<HTMLInputElement>(null);
@@ -693,6 +699,43 @@ export default function CaseWorkspacePage() {
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to update deduction");
     }
+  };
+
+  // Delete deduction
+  const handleDeleteDeduction = async (deductionId: string) => {
+    try {
+      const res = await fetch(`/api/cases/${caseId}/deductions`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ deductionId }),
+      });
+
+      if (!res.ok) throw new Error("Failed to delete deduction");
+      await fetchCase();
+      await fetchExposure();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to delete deduction");
+    }
+  };
+
+  // Open deduction for editing in drawer
+  const handleOpenDeductionDrawer = (deduction: Deduction) => {
+    setSelectedDeductionForEdit(deduction);
+    setIsDeductionDrawerOpen(true);
+  };
+
+  // Close deduction drawer
+  const handleCloseDeductionDrawer = () => {
+    setIsDeductionDrawerOpen(false);
+    setSelectedDeductionForEdit(null);
+  };
+
+  // Attach evidence to deduction (opens file picker)
+  const handleAttachEvidenceToDeduction = (deductionId: string) => {
+    // Store the deduction ID for when file is uploaded
+    // For now, just trigger file upload - evidence linking would need a backend enhancement
+    fileInputRef.current?.click();
+    toast.info("Upload evidence, then link it to this deduction in the drawer");
   };
 
   if (loading) {
@@ -1261,155 +1304,28 @@ export default function CaseWorkspacePage() {
                   )}
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="space-y-2">
+                  {/* Compact deduction list */}
                   {caseData.deductions.map((deduction) => (
-                    <div
+                    <DeductionRow
                       key={deduction.id}
-                      className={cn(
-                        "p-4 border rounded-lg",
-                        deduction.riskLevel === "HIGH"
-                          ? "border-red-200 bg-red-50"
-                          : deduction.riskLevel === "MEDIUM"
-                          ? "border-yellow-200 bg-yellow-50"
-                          : ""
-                      )}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="outline">{deduction.category}</Badge>
-                            {deduction.riskLevel && (
-                              <Badge className={cn("text-xs", riskColors[deduction.riskLevel as keyof typeof riskColors])}>
-                                {deduction.riskLevel} Risk
-                              </Badge>
-                            )}
-                            {deduction.aiGenerated && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <Badge variant="outline" className="text-xs">
-                                      <Sparkles className="h-3 w-3 mr-1" />
-                                      AI
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>Description improved with AI</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                            {!deduction.hasEvidence && (
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger>
-                                    <AlertCircle className="h-4 w-4 text-yellow-500" />
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>No evidence attached</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
-                            )}
-                          </div>
-                          <p className="font-medium">{deduction.description}</p>
-                          {deduction.notes && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              {deduction.notes}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-4 mt-2 text-sm">
-                            {deduction.itemAge && (
-                              <span className="text-muted-foreground">
-                                Item age: {deduction.itemAge} months
-                              </span>
-                            )}
-                            {deduction.damageType && (
-                              <span className="text-muted-foreground">
-                                {deduction.damageType.replace("_", " ")}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <span className="font-bold text-lg">
-                            ${Number(deduction.amount).toFixed(2)}
-                          </span>
-                          {!isClosed && !deduction.aiGenerated && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-xs border-primary/30 text-primary hover:bg-primary/5 hover:text-primary"
-                              onClick={() => {
-                                setSelectedDeduction(deduction);
-                                setShowAiDialog(true);
-                              }}
-                            >
-                              <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                              Improve with AI
-                            </Button>
-                          )}
-                          {deduction.aiGenerated && (
-                            <span className="inline-flex items-center gap-1 text-xs text-primary bg-primary/10 px-2 py-1 rounded-full">
-                              <Sparkles className="h-3 w-3" />
-                              AI-improved
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Risk Assessment Controls */}
-                      {!isClosed && (
-                        <div className="mt-3 pt-3 border-t flex flex-wrap gap-3">
-                          <Select
-                            value={deduction.damageType || ""}
-                            onValueChange={(value) =>
-                              handleUpdateDeductionRisk(deduction.id, { damageType: value })
-                            }
-                          >
-                            <SelectTrigger className="w-40 h-8 text-xs">
-                              <SelectValue placeholder="Damage type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="BEYOND_NORMAL">Beyond normal use</SelectItem>
-                              <SelectItem value="NORMAL_WEAR">Normal wear/tear</SelectItem>
-                              <SelectItem value="INTENTIONAL">Intentional damage</SelectItem>
-                              <SelectItem value="NEGLIGENCE">Negligence</SelectItem>
-                            </SelectContent>
-                          </Select>
-
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              placeholder="Age (months)"
-                              className="w-28 h-8 text-xs"
-                              value={deduction.itemAge || ""}
-                              onChange={(e) =>
-                                handleUpdateDeductionRisk(deduction.id, {
-                                  itemAge: e.target.value ? parseInt(e.target.value) : null,
-                                })
-                              }
-                            />
-                          </div>
-
-                          <Select
-                            value={deduction.riskLevel || ""}
-                            onValueChange={(value) =>
-                              handleUpdateDeductionRisk(deduction.id, { riskLevel: value })
-                            }
-                          >
-                            <SelectTrigger className="w-32 h-8 text-xs">
-                              <SelectValue placeholder="Risk level" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="LOW">Low Risk</SelectItem>
-                              <SelectItem value="MEDIUM">Medium Risk</SelectItem>
-                              <SelectItem value="HIGH">High Risk</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      )}
-                    </div>
+                      deduction={deduction}
+                      onClick={() => handleOpenDeductionDrawer(deduction)}
+                      isClosed={isClosed}
+                    />
                   ))}
+
+                  {/* Add Deduction button */}
+                  {!isClosed && (
+                    <Button
+                      variant="outline"
+                      className="w-full border-dashed"
+                      onClick={() => setShowAddDeductionDialog(true)}
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Deduction
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -2241,6 +2157,28 @@ export default function CaseWorkspacePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Deduction Drawer */}
+      <DeductionDrawer
+        deduction={selectedDeductionForEdit}
+        attachments={caseData.attachments.map((a) => ({
+          ...a,
+          tags: a.type === "DELIVERY_PROOF" ? ["delivery_proof"] : [],
+        }))}
+        isOpen={isDeductionDrawerOpen}
+        onClose={handleCloseDeductionDrawer}
+        onUpdate={async (id, updates) => {
+          await handleUpdateDeductionRisk(id, updates);
+        }}
+        onDelete={handleDeleteDeduction}
+        onImproveWithAI={(deduction) => {
+          setSelectedDeduction(deduction);
+          setShowAiDialog(true);
+          handleCloseDeductionDrawer();
+        }}
+        onAttachEvidence={handleAttachEvidenceToDeduction}
+        isClosed={isClosed}
+      />
 
       {/* Beta Feedback Micro-surveys */}
       {/* Show case created survey on first visit */}
