@@ -53,17 +53,6 @@ export const logger = winston.createLogger({
     new winston.transports.Console({
       format: consoleFormat,
     }),
-    // File transport for errors (local dev only usually, but good for now)
-    new winston.transports.File({
-      filename: "logs/error.log",
-      level: "error",
-      format: jsonFormat,
-    }),
-    // File transport for all logs (local dev only)
-    new winston.transports.File({
-      filename: "logs/app.log",
-      format: jsonFormat,
-    }),
   ],
 });
 
