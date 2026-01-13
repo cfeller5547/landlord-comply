@@ -105,6 +105,7 @@ import {
   ArrowRight,
   Eye,
   SkipForward,
+  RefreshCw,
 } from "lucide-react";
 
 // Types
@@ -297,6 +298,7 @@ export default function CaseWorkspacePage() {
   const [aiResult, setAiResult] = useState<{ description: string; reasoning: string } | null>(null);
   const [showDocGeneratedSurvey, setShowDocGeneratedSurvey] = useState(false);
   const [showDeliverySurvey, setShowDeliverySurvey] = useState(false);
+  const [exportingProofPacket, setExportingProofPacket] = useState(false);
 
   // Form state for Mark as Sent
   const [sendForm, setSendForm] = useState({
@@ -1027,22 +1029,31 @@ export default function CaseWorkspacePage() {
                           </div>
                           {!isSent ? (
                             <div className="space-y-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full text-muted-foreground"
-                                onClick={() => handleGeneratePdf("notice_letter")}
-                                disabled={generatingPdf !== null || isClosed}
-                              >
-                                {generatingPdf === "notice_letter" ? (
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                ) : (
-                                  <FileDown className="h-3 w-3 mr-1" />
-                                )}
-                                Update
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full text-muted-foreground hover:text-primary"
+                                      onClick={() => handleGeneratePdf("notice_letter")}
+                                      disabled={generatingPdf !== null || isClosed}
+                                    >
+                                      {generatingPdf === "notice_letter" ? (
+                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      ) : (
+                                        <RefreshCw className="h-3 w-3 mr-1" />
+                                      )}
+                                      Regenerate
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Update the document with your latest case changes</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               <p className="text-[10px] text-center text-muted-foreground">
-                                Previous versions kept for your records
+                                Edit case details above, then regenerate
                               </p>
                             </div>
                           ) : (
@@ -1123,22 +1134,31 @@ export default function CaseWorkspacePage() {
                           </div>
                           {!isSent ? (
                             <div className="space-y-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="w-full text-muted-foreground"
-                                onClick={() => handleGeneratePdf("itemized_statement")}
-                                disabled={generatingPdf !== null || isClosed}
-                              >
-                                {generatingPdf === "itemized_statement" ? (
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                ) : (
-                                  <FileDown className="h-3 w-3 mr-1" />
-                                )}
-                                Update
-                              </Button>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      className="w-full text-muted-foreground hover:text-primary"
+                                      onClick={() => handleGeneratePdf("itemized_statement")}
+                                      disabled={generatingPdf !== null || isClosed}
+                                    >
+                                      {generatingPdf === "itemized_statement" ? (
+                                        <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                      ) : (
+                                        <RefreshCw className="h-3 w-3 mr-1" />
+                                      )}
+                                      Regenerate
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Update the document with your latest deductions</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
                               <p className="text-[10px] text-center text-muted-foreground">
-                                Previous versions kept for your records
+                                Edit deductions above, then regenerate
                               </p>
                             </div>
                           ) : (
@@ -1218,15 +1238,42 @@ export default function CaseWorkspacePage() {
                         <Button
                           className="w-full"
                           size="lg"
-                          disabled={isClosed}
-                          onClick={() => {
-                            toast.info("Proof packet export coming soon!", {
-                              description: "This feature will bundle all case documents into a court-ready ZIP archive."
-                            });
+                          disabled={isClosed || exportingProofPacket}
+                          onClick={async () => {
+                            setExportingProofPacket(true);
+                            try {
+                              const res = await fetch(`/api/cases/${caseId}/proof-packet`);
+                              if (!res.ok) {
+                                const err = await res.json();
+                                throw new Error(err.error || "Failed to generate proof packet");
+                              }
+                              const blob = await res.blob();
+                              const url = window.URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              const disposition = res.headers.get("Content-Disposition");
+                              const filename = disposition?.match(/filename="(.+)"/)?.[1] || "ProofPacket.zip";
+                              a.download = filename;
+                              document.body.appendChild(a);
+                              a.click();
+                              window.URL.revokeObjectURL(url);
+                              document.body.removeChild(a);
+                              toast.success("Proof packet downloaded!", {
+                                description: "Your court-ready document bundle is ready."
+                              });
+                            } catch (err) {
+                              toast.error(err instanceof Error ? err.message : "Failed to export proof packet");
+                            } finally {
+                              setExportingProofPacket(false);
+                            }
                           }}
                         >
-                          <Package className="h-4 w-4 mr-2" />
-                          Download Proof Packet
+                          {exportingProofPacket ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Package className="h-4 w-4 mr-2" />
+                          )}
+                          {exportingProofPacket ? "Generating..." : "Download Proof Packet"}
                         </Button>
                         <p className="text-[10px] text-center text-muted-foreground">
                           Everything you need if a dispute arises
