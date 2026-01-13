@@ -1561,11 +1561,43 @@ export default function CaseWorkspacePage() {
                       )}
                     </div>
 
+                    {/* Show warning if case isn't ready */}
+                    {(() => {
+                      const hasNoticeLetter = caseData.documents.some((d) => d.type === "NOTICE_LETTER");
+                      const hasBlockers = qualityCheck?.blockers && qualityCheck.blockers.length > 0;
+                      const isReady = hasNoticeLetter && !hasBlockers;
+
+                      if (!isReady) {
+                        return (
+                          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg mb-4">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-4 w-4 text-yellow-600 mt-0.5 flex-shrink-0" />
+                              <div className="text-sm">
+                                <p className="font-medium text-yellow-800">Not ready to send yet</p>
+                                <ul className="mt-1 text-yellow-700 space-y-0.5">
+                                  {!hasNoticeLetter && <li>• Generate Notice Letter first</li>}
+                                  {hasBlockers && qualityCheck?.blockers.map((b) => (
+                                    <li key={b.id}>• {b.label}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
+
                     <Button
                       className="w-full"
                       size="lg"
                       onClick={handleMarkAsSent}
-                      disabled={!sendForm.deliveryMethod || !sendForm.sentDate}
+                      disabled={
+                        !sendForm.deliveryMethod ||
+                        !sendForm.sentDate ||
+                        !caseData.documents.some((d) => d.type === "NOTICE_LETTER") ||
+                        (qualityCheck?.blockers && qualityCheck.blockers.length > 0)
+                      }
                     >
                       <Check className="h-4 w-4 mr-2" />
                       Confirm Sent
@@ -1693,7 +1725,7 @@ export default function CaseWorkspacePage() {
                   .map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 group"
                     >
                       <Checkbox
                         checked={item.completed}
@@ -1704,20 +1736,76 @@ export default function CaseWorkspacePage() {
                       />
                       <span
                         className={cn(
-                          "text-sm",
+                          "text-sm flex-1",
                           item.completed && "line-through text-muted-foreground"
                         )}
                       >
                         {item.label}
                       </span>
-                      {item.blocksExport && !item.completed && (
-                        <Badge variant="destructive" className="text-xs ml-auto">
+                      {item.blocksExport && !item.completed ? (
+                        <Badge variant="destructive" className="text-xs">
                           Required
                         </Badge>
-                      )}
+                      ) : !item.blocksExport && !isClosed ? (
+                        <button
+                          onClick={async () => {
+                            try {
+                              await fetch(`/api/cases/${caseId}/checklist`, {
+                                method: "DELETE",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ itemId: item.id }),
+                              });
+                              await fetchCase();
+                            } catch (err) {
+                              toast.error("Failed to remove item");
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      ) : null}
                     </div>
                   ))}
               </div>
+
+              {/* Add custom checklist item */}
+              {!isClosed && (
+                <div className="mt-3 pt-3 border-t">
+                  <form
+                    onSubmit={async (e) => {
+                      e.preventDefault();
+                      const form = e.target as HTMLFormElement;
+                      const input = form.elements.namedItem("newItem") as HTMLInputElement;
+                      const label = input.value.trim();
+                      if (!label) return;
+
+                      try {
+                        await fetch(`/api/cases/${caseId}/checklist`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({ label }),
+                        });
+                        input.value = "";
+                        await fetchCase();
+                        toast.success("Item added");
+                      } catch (err) {
+                        toast.error("Failed to add item");
+                      }
+                    }}
+                    className="flex gap-2"
+                  >
+                    <Input
+                      name="newItem"
+                      placeholder="Add custom item..."
+                      className="h-8 text-sm"
+                    />
+                    <Button type="submit" size="sm" variant="outline" className="h-8">
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </form>
+                </div>
+              )}
             </CardContent>
           </Card>
 
@@ -1925,7 +2013,7 @@ export default function CaseWorkspacePage() {
       </div>
 
       {/* AI Improve Dialog */}
-      <Dialog open={showAiDialog} onOpenChange={handleCloseAiDialog}>
+      <Dialog open={showAiDialog} onOpenChange={(open) => !open && handleCloseAiDialog()}>
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

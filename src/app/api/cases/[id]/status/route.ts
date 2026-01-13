@@ -5,7 +5,7 @@ import { getDbUser } from "@/lib/auth";
 type CaseStatus = "ACTIVE" | "PENDING_SEND" | "SENT" | "CLOSED";
 
 const validTransitions: Record<CaseStatus, CaseStatus[]> = {
-  ACTIVE: ["PENDING_SEND", "CLOSED"],
+  ACTIVE: ["PENDING_SEND", "SENT", "CLOSED"], // Allow direct ACTIVE → SENT for simpler UX
   PENDING_SEND: ["ACTIVE", "SENT", "CLOSED"],
   SENT: ["CLOSED"],
   CLOSED: [], // Cannot transition out of closed
