@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { signup } from "../actions";
 import { Loader2, CheckCircle2 } from "lucide-react";
+import { Logo } from "@/components/ui/logo";
 
 export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
@@ -46,11 +47,8 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary">
-              <span className="text-lg font-bold text-primary-foreground">LC</span>
-            </div>
-            <span className="text-xl font-semibold text-foreground">LandlordComply</span>
+          <Link href="/">
+            <Logo iconSize={40} showCheckmark={true} textClassName="text-xl" />
           </Link>
         </div>
 

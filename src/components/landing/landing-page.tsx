@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Logo } from "@/components/ui/logo";
 import {
   CheckCircle2,
   Clock,
@@ -165,10 +166,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
       <header className="border-b border-border bg-card/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
           <Link href="/" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-              <span className="text-sm font-bold text-primary-foreground">LC</span>
-            </div>
-            <span className="font-semibold text-foreground">LandlordComply</span>
+            <Logo iconSize={32} showCheckmark={false} />
             {variant === "beta" && (
               <Badge variant="secondary" className="ml-1 text-[10px] bg-primary/10 text-primary border-primary/20">
                 BETA
@@ -1411,10 +1409,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
         <div className="mx-auto max-w-6xl px-4">
           <div className="flex flex-col items-center justify-between gap-6 md:flex-row">
             <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-                <span className="text-sm font-bold text-primary-foreground">LC</span>
-              </div>
-              <span className="font-semibold text-foreground">LandlordComply</span>
+              <Logo iconSize={32} showCheckmark={false} />
               {variant === "beta" && (
                 <Badge variant="secondary" className="ml-1 text-[10px]">BETA</Badge>
               )}
