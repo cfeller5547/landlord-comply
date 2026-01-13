@@ -975,10 +975,7 @@ export default function CaseWorkspacePage() {
                               variant="outline"
                               className="flex-1"
                               onClick={() => {
-                                const a = document.createElement("a");
-                                a.href = `/api/cases/${caseId}/documents/${noticeDoc.id}/download`;
-                                a.download = "notice-letter.pdf";
-                                a.click();
+                                window.open(`/api/cases/${caseId}/documents/${noticeDoc.id}/download`, "_blank");
                               }}
                             >
                               <Download className="h-4 w-4 mr-2" />
@@ -1074,10 +1071,7 @@ export default function CaseWorkspacePage() {
                               variant="outline"
                               className="flex-1"
                               onClick={() => {
-                                const a = document.createElement("a");
-                                a.href = `/api/cases/${caseId}/documents/${itemizedDoc.id}/download`;
-                                a.download = "itemized-statement.pdf";
-                                a.click();
+                                window.open(`/api/cases/${caseId}/documents/${itemizedDoc.id}/download`, "_blank");
                               }}
                             >
                               <Download className="h-4 w-4 mr-2" />
