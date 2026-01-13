@@ -54,7 +54,11 @@ export async function GET(
     if (error || !data?.signedUrl) {
       console.error("Error creating signed URL:", error);
       return NextResponse.json(
-        { error: "Failed to generate download link" },
+        { 
+          error: "Failed to generate download link",
+          details: error?.message || "No signed URL returned",
+          debug_path: filePath 
+        },
         { status: 500 }
       );
     }

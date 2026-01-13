@@ -932,154 +932,297 @@ export default function CaseWorkspacePage() {
             <CardContent className="space-y-4">
               <div className="grid sm:grid-cols-2 gap-4">
                 {/* Notice Letter */}
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium">Notice Letter</h4>
-                    {caseData.documents.some((d) => d.type === "NOTICE_LETTER") && (
-                      <Badge variant="outline" className="text-green-600 border-green-600">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Ready
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Official notice to tenant with deposit disposition
-                  </p>
-                  {caseData.documents.some((d) => d.type === "NOTICE_LETTER") ? (
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="default"
-                          className="flex-1"
-                          onClick={() => {
-                            const doc = caseData.documents.find((d) => d.type === "NOTICE_LETTER");
-                            if (doc) window.open(`/api/cases/${caseId}/documents/${doc.id}/download`, "_blank");
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Preview
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            const doc = caseData.documents.find((d) => d.type === "NOTICE_LETTER");
-                            if (doc) {
-                              const a = document.createElement("a");
-                              a.href = `/api/cases/${caseId}/documents/${doc.id}/download`;
-                              a.download = "notice-letter.pdf";
-                              a.click();
-                            }
-                          }}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-muted-foreground"
-                        onClick={() => handleGeneratePdf("notice_letter")}
-                        disabled={generatingPdf !== null || isClosed}
-                      >
-                        {generatingPdf === "notice_letter" ? (
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        ) : (
-                          <FileDown className="h-3 w-3 mr-1" />
+                {(() => {
+                  const noticeDoc = caseData.documents.find((d) => d.type === "NOTICE_LETTER");
+                  const isSent = caseData.status === "SENT" || caseData.status === "CLOSED";
+                  return (
+                    <div className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">Notice Letter</h4>
+                        {noticeDoc && (
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Saved
+                          </Badge>
                         )}
-                        Regenerate
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => handleGeneratePdf("notice_letter")}
-                      disabled={generatingPdf !== null || isClosed}
-                      className="w-full"
-                    >
-                      {generatingPdf === "notice_letter" ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileDown className="h-4 w-4 mr-2" />
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Official notice to tenant with deposit disposition
+                      </p>
+                      {noticeDoc && (
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Generated {new Date(noticeDoc.generatedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })} • v{noticeDoc.version}
+                        </p>
                       )}
-                      Generate
-                    </Button>
-                  )}
-                </div>
+                      {noticeDoc ? (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="default"
+                              className="flex-1"
+                              onClick={() => {
+                                window.open(`/api/cases/${caseId}/documents/${noticeDoc.id}/download`, "_blank");
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Preview
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => {
+                                const a = document.createElement("a");
+                                a.href = `/api/cases/${caseId}/documents/${noticeDoc.id}/download`;
+                                a.download = "notice-letter.pdf";
+                                a.click();
+                              }}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </Button>
+                          </div>
+                          {!isSent ? (
+                            <div className="space-y-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full text-muted-foreground"
+                                onClick={() => handleGeneratePdf("notice_letter")}
+                                disabled={generatingPdf !== null || isClosed}
+                              >
+                                {generatingPdf === "notice_letter" ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <FileDown className="h-3 w-3 mr-1" />
+                                )}
+                                Update
+                              </Button>
+                              <p className="text-[10px] text-center text-muted-foreground">
+                                Previous versions kept for your records
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-center text-muted-foreground py-2">
+                              <Shield className="h-3 w-3 inline mr-1" />
+                              Version locked — case marked as sent
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => handleGeneratePdf("notice_letter")}
+                          disabled={generatingPdf !== null || isClosed}
+                          className="w-full mt-2"
+                        >
+                          {generatingPdf === "notice_letter" ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <FileDown className="h-4 w-4 mr-2" />
+                          )}
+                          Generate
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
 
                 {/* Itemized Statement */}
-                <div className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="font-medium">Itemized Statement</h4>
-                    {caseData.documents.some((d) => d.type === "ITEMIZED_STATEMENT") && (
-                      <Badge variant="outline" className="text-green-600 border-green-600">
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                        Ready
-                      </Badge>
+                {(() => {
+                  const itemizedDoc = caseData.documents.find((d) => d.type === "ITEMIZED_STATEMENT");
+                  const isSent = caseData.status === "SENT" || caseData.status === "CLOSED";
+                  return (
+                    <div className="p-4 border rounded-lg">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-medium">Itemized Statement</h4>
+                        {itemizedDoc && (
+                          <Badge variant="outline" className="text-green-600 border-green-600">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Saved
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Detailed breakdown of all deductions
+                      </p>
+                      {itemizedDoc && (
+                        <p className="text-xs text-muted-foreground mb-3">
+                          Generated {new Date(itemizedDoc.generatedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })} • v{itemizedDoc.version}
+                        </p>
+                      )}
+                      {itemizedDoc ? (
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Button
+                              variant="default"
+                              className="flex-1"
+                              onClick={() => {
+                                window.open(`/api/cases/${caseId}/documents/${itemizedDoc.id}/download`, "_blank");
+                              }}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              Preview
+                            </Button>
+                            <Button
+                              variant="outline"
+                              className="flex-1"
+                              onClick={() => {
+                                const a = document.createElement("a");
+                                a.href = `/api/cases/${caseId}/documents/${itemizedDoc.id}/download`;
+                                a.download = "itemized-statement.pdf";
+                                a.click();
+                              }}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Download
+                            </Button>
+                          </div>
+                          {!isSent ? (
+                            <div className="space-y-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full text-muted-foreground"
+                                onClick={() => handleGeneratePdf("itemized_statement")}
+                                disabled={generatingPdf !== null || isClosed}
+                              >
+                                {generatingPdf === "itemized_statement" ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <FileDown className="h-3 w-3 mr-1" />
+                                )}
+                                Update
+                              </Button>
+                              <p className="text-[10px] text-center text-muted-foreground">
+                                Previous versions kept for your records
+                              </p>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-center text-muted-foreground py-2">
+                              <Shield className="h-3 w-3 inline mr-1" />
+                              Version locked — case marked as sent
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <Button
+                          onClick={() => handleGeneratePdf("itemized_statement")}
+                          disabled={generatingPdf !== null || isClosed}
+                          variant="outline"
+                          className="w-full mt-2"
+                        >
+                          {generatingPdf === "itemized_statement" ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <FileDown className="h-4 w-4 mr-2" />
+                          )}
+                          Generate
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Proof Packet - Workflow Climax */}
+              {(() => {
+                const hasNoticeLetter = caseData.documents.some((d) => d.type === "NOTICE_LETTER");
+                const hasItemized = caseData.documents.some((d) => d.type === "ITEMIZED_STATEMENT");
+                const isReady = hasNoticeLetter && hasItemized;
+                const isSent = caseData.status === "SENT" || caseData.status === "CLOSED";
+
+                return (
+                  <div className={cn(
+                    "p-4 border-2 rounded-lg mt-4",
+                    isReady ? "border-primary bg-primary/5" : "border-dashed border-muted-foreground/30"
+                  )}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Package className="h-5 w-5 text-primary" />
+                        <h4 className="font-medium">Proof Packet</h4>
+                      </div>
+                      {isReady && (
+                        <Badge className="bg-primary text-primary-foreground">
+                          Ready to Export
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      Complete ZIP archive with all documents, evidence, audit trail, and jurisdiction citations for your records.
+                    </p>
+
+                    {isReady ? (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            Notice Letter
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            Itemized Statement
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            {caseData.attachments.length} Attachment{caseData.attachments.length !== 1 ? "s" : ""}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <CheckCircle className="h-3 w-3 text-green-600" />
+                            Audit Log
+                          </span>
+                        </div>
+                        <Button
+                          className="w-full"
+                          size="lg"
+                          disabled={isClosed}
+                          onClick={() => {
+                            toast.info("Proof packet export coming soon!", {
+                              description: "This feature will bundle all case documents into a court-ready ZIP archive."
+                            });
+                          }}
+                        >
+                          <Package className="h-4 w-4 mr-2" />
+                          Download Proof Packet
+                        </Button>
+                        <p className="text-[10px] text-center text-muted-foreground">
+                          Everything you need if a dispute arises
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <span className="flex items-center gap-1">
+                            {hasNoticeLetter ? (
+                              <CheckCircle className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            Notice Letter
+                          </span>
+                          <span className="flex items-center gap-1">
+                            {hasItemized ? (
+                              <CheckCircle className="h-3 w-3 text-green-600" />
+                            ) : (
+                              <AlertCircle className="h-3 w-3 text-muted-foreground" />
+                            )}
+                            Itemized Statement
+                          </span>
+                        </div>
+                        <p className="text-xs text-center text-muted-foreground py-2">
+                          Generate both documents above to unlock the Proof Packet
+                        </p>
+                      </div>
                     )}
                   </div>
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Detailed breakdown of all deductions
-                  </p>
-                  {caseData.documents.some((d) => d.type === "ITEMIZED_STATEMENT") ? (
-                    <div className="space-y-2">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="default"
-                          className="flex-1"
-                          onClick={() => {
-                            const doc = caseData.documents.find((d) => d.type === "ITEMIZED_STATEMENT");
-                            if (doc) window.open(`/api/cases/${caseId}/documents/${doc.id}/download`, "_blank");
-                          }}
-                        >
-                          <Eye className="h-4 w-4 mr-2" />
-                          Preview
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            const doc = caseData.documents.find((d) => d.type === "ITEMIZED_STATEMENT");
-                            if (doc) {
-                              const a = document.createElement("a");
-                              a.href = `/api/cases/${caseId}/documents/${doc.id}/download`;
-                              a.download = "itemized-statement.pdf";
-                              a.click();
-                            }
-                          }}
-                        >
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="w-full text-muted-foreground"
-                        onClick={() => handleGeneratePdf("itemized_statement")}
-                        disabled={generatingPdf !== null || isClosed}
-                      >
-                        {generatingPdf === "itemized_statement" ? (
-                          <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                        ) : (
-                          <FileDown className="h-3 w-3 mr-1" />
-                        )}
-                        Regenerate
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button
-                      onClick={() => handleGeneratePdf("itemized_statement")}
-                      disabled={generatingPdf !== null || isClosed}
-                      variant="outline"
-                      className="w-full"
-                    >
-                      {generatingPdf === "itemized_statement" ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <FileDown className="h-4 w-4 mr-2" />
-                      )}
-                      Generate
-                    </Button>
-                  )}
-                </div>
-              </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
