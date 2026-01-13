@@ -953,7 +953,7 @@ export default function CaseWorkspacePage() {
                           className="flex-1"
                           onClick={() => {
                             const doc = caseData.documents.find((d) => d.type === "NOTICE_LETTER");
-                            if (doc?.fileUrl) window.open(doc.fileUrl, "_blank");
+                            if (doc) window.open(`/api/cases/${caseId}/documents/${doc.id}/download`, "_blank");
                           }}
                         >
                           <Eye className="h-4 w-4 mr-2" />
@@ -963,9 +963,9 @@ export default function CaseWorkspacePage() {
                           variant="outline"
                           onClick={() => {
                             const doc = caseData.documents.find((d) => d.type === "NOTICE_LETTER");
-                            if (doc?.fileUrl) {
+                            if (doc) {
                               const a = document.createElement("a");
-                              a.href = doc.fileUrl;
+                              a.href = `/api/cases/${caseId}/documents/${doc.id}/download`;
                               a.download = "notice-letter.pdf";
                               a.click();
                             }
@@ -1027,7 +1027,7 @@ export default function CaseWorkspacePage() {
                           className="flex-1"
                           onClick={() => {
                             const doc = caseData.documents.find((d) => d.type === "ITEMIZED_STATEMENT");
-                            if (doc?.fileUrl) window.open(doc.fileUrl, "_blank");
+                            if (doc) window.open(`/api/cases/${caseId}/documents/${doc.id}/download`, "_blank");
                           }}
                         >
                           <Eye className="h-4 w-4 mr-2" />
@@ -1037,9 +1037,9 @@ export default function CaseWorkspacePage() {
                           variant="outline"
                           onClick={() => {
                             const doc = caseData.documents.find((d) => d.type === "ITEMIZED_STATEMENT");
-                            if (doc?.fileUrl) {
+                            if (doc) {
                               const a = document.createElement("a");
-                              a.href = doc.fileUrl;
+                              a.href = `/api/cases/${caseId}/documents/${doc.id}/download`;
                               a.download = "itemized-statement.pdf";
                               a.click();
                             }
