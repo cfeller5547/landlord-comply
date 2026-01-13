@@ -839,19 +839,24 @@ export default function CaseWorkspacePage() {
       )}
 
       {/* Guided Workflow Progress */}
-      {!isClosed && (
-        <CaseProgress
-          steps={calculateWorkflowSteps(caseData)}
-          confidenceLevel={calculateConfidence(qualityCheck, daysUntilDeadline).level}
-          confidenceMessage={calculateConfidence(qualityCheck, daysUntilDeadline).message}
-          daysLeft={daysUntilDeadline}
-          dueDate={new Date(caseData.dueDate).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-          })}
-        />
-      )}
+      {!isClosed && (() => {
+        const daysLeft = Math.ceil(
+          (new Date(caseData.dueDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+        );
+        return (
+          <CaseProgress
+            steps={calculateWorkflowSteps(caseData)}
+            confidenceLevel={calculateConfidence(qualityCheck, daysLeft).level}
+            confidenceMessage={calculateConfidence(qualityCheck, daysLeft).message}
+            daysLeft={daysLeft}
+            dueDate={new Date(caseData.dueDate).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
+          />
+        );
+      })()}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* Left Column - Main Content */}
