@@ -26,7 +26,9 @@ export async function GET(
         },
         tenants: true,
         deductions: true,
-        documents: true,
+        documents: {
+          orderBy: { version: "desc" },
+        },
         attachments: true,
         auditEvents: {
           orderBy: { timestamp: "desc" },
