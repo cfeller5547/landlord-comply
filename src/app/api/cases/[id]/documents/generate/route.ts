@@ -4,7 +4,7 @@ import { requireDb } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
 import { NoticeLetterPDF } from "@/lib/pdf/notice-letter";
 import { ItemizedStatementPDF } from "@/lib/pdf/itemized-statement";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { DocumentType as PrismaDocumentType } from "@prisma/client";
 
 type DocumentType = "notice_letter" | "itemized_statement";
@@ -154,20 +154,23 @@ export async function POST(
       fileName = `itemized-statement-${caseId.slice(0, 8)}-${Date.now()}.pdf`;
     }
 
-    // Upload to Supabase Storage
-    const supabase = await createClient();
+    // Upload to Supabase Storage using admin client (service role key)
+    const supabase = createAdminClient();
     const filePath = `documents/${user.id}/${caseId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage
       .from("case-files")
       .upload(filePath, pdfBuffer, {
         contentType: "application/pdf",
-        upsert: false,
+        upsert: true, // Allow overwriting if file exists
       });
 
     if (uploadError) {
       console.error("Upload error:", uploadError);
-      // Continue anyway - we can still return the PDF even if storage fails
+      return NextResponse.json(
+        { error: "Failed to upload document", details: uploadError.message },
+        { status: 500 }
+      );
     }
 
     // Get public URL

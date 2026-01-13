@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireDb } from "@/lib/db";
 import { getDbUser } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 // GET /api/cases/[id]/attachments - List attachments for a case
 export async function GET(
@@ -108,8 +108,8 @@ export async function POST(
     const fileName = `${timestamp}-${safeName}`;
     const filePath = `attachments/${user.id}/${caseId}/${fileName}`;
 
-    // Upload to Supabase Storage
-    const supabase = await createClient();
+    // Upload to Supabase Storage using admin client (service role key)
+    const supabase = createAdminClient();
     const fileBuffer = Buffer.from(await file.arrayBuffer());
 
     const { error: uploadError } = await supabase.storage
@@ -131,12 +131,12 @@ export async function POST(
       );
     }
 
-    // Get signed URL for the file
-    const { data: urlData } = await supabase.storage
+    // Get public URL for the file (bucket is public)
+    const { data: urlData } = supabase.storage
       .from("case-files")
-      .createSignedUrl(filePath, 60 * 60 * 24 * 365); // 1 year expiry
+      .getPublicUrl(filePath);
 
-    const fileUrl = urlData?.signedUrl || filePath;
+    const fileUrl = urlData?.publicUrl || filePath;
 
     // Parse tags
     const tagArray = tags
@@ -235,8 +235,8 @@ export async function DELETE(
       );
     }
 
-    // Delete from Supabase Storage
-    const supabase = await createClient();
+    // Delete from Supabase Storage using admin client
+    const supabase = createAdminClient();
     const filePath = attachment.fileUrl.includes("attachments/")
       ? attachment.fileUrl.split("attachments/").pop()
       : null;
