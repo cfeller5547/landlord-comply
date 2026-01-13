@@ -145,13 +145,6 @@ export function TopBar({ user }: { user: UserData | null }) {
       </div>
 
       <div className="flex items-center gap-4">
-        <Button asChild size="sm" className="hidden lg:flex">
-          <Link href="/cases/new">
-            <Plus className="mr-2 h-4 w-4" />
-            New Case
-          </Link>
-        </Button>
-
         <UserMenu user={user} />
       </div>
     </header>
