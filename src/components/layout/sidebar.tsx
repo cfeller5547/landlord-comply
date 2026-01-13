@@ -16,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Logo } from "@/components/ui/logo";
 import { useState } from "react";
 import { UserMenu } from "./user-menu";
 import { config } from "@/lib/config";
@@ -44,10 +45,7 @@ function NavContent({ onNavigate }: { onNavigate?: () => void }) {
       {/* Logo */}
       <div className="flex h-16 items-center border-b border-border px-6">
         <Link href="/dashboard" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">LC</span>
-          </div>
-          <span className="font-semibold text-foreground">LandlordComply</span>
+          <Logo iconSize={32} showCheckmark={false} />
           {isBeta && (
             <Badge variant="secondary" className="ml-1 text-[10px] bg-primary/10 text-primary border-primary/20 gap-1">
               <FlaskConical className="h-3 w-3" />
@@ -135,10 +133,7 @@ export function TopBar({ user }: { user: UserData | null }) {
         <MobileNav />
         {/* Mobile logo */}
         <Link href="/dashboard" className="flex items-center gap-2 lg:hidden">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <span className="text-sm font-bold text-primary-foreground">LC</span>
-          </div>
-          <span className="font-semibold text-foreground">LandlordComply</span>
+          <Logo iconSize={32} showCheckmark={false} />
           {isBeta && (
             <Badge variant="secondary" className="ml-1 text-[10px] bg-primary/10 text-primary border-primary/20 gap-1">
               <FlaskConical className="h-3 w-3" />
