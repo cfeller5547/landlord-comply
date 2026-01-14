@@ -68,6 +68,21 @@ interface CaseData {
   }>;
 }
 
+// State abbreviation to full name mapping
+const STATE_NAMES: Record<string, string> = {
+  AL: "Alabama", AK: "Alaska", AZ: "Arizona", AR: "Arkansas", CA: "California",
+  CO: "Colorado", CT: "Connecticut", DE: "Delaware", FL: "Florida", GA: "Georgia",
+  HI: "Hawaii", ID: "Idaho", IL: "Illinois", IN: "Indiana", IA: "Iowa",
+  KS: "Kansas", KY: "Kentucky", LA: "Louisiana", ME: "Maine", MD: "Maryland",
+  MA: "Massachusetts", MI: "Michigan", MN: "Minnesota", MS: "Mississippi", MO: "Missouri",
+  MT: "Montana", NE: "Nebraska", NV: "Nevada", NH: "New Hampshire", NJ: "New Jersey",
+  NM: "New Mexico", NY: "New York", NC: "North Carolina", ND: "North Dakota", OH: "Ohio",
+  OK: "Oklahoma", OR: "Oregon", PA: "Pennsylvania", RI: "Rhode Island", SC: "South Carolina",
+  SD: "South Dakota", TN: "Tennessee", TX: "Texas", UT: "Utah", VT: "Vermont",
+  VA: "Virginia", WA: "Washington", WV: "West Virginia", WI: "Wisconsin", WY: "Wyoming",
+  DC: "District of Columbia",
+};
+
 export default function PacketDownloadPage() {
   const params = useParams();
   const router = useRouter();
@@ -120,13 +135,28 @@ export default function PacketDownloadPage() {
   const hasDeductions = caseData && caseData.deductions.length > 0;
   const isDraft = !hasTenants || !hasDeductions;
 
-  // Format date
-  function formatDate(dateString: string) {
-    return new Date(dateString).toLocaleDateString("en-US", {
+  // Format date safely (handles Invalid Date)
+  function formatDate(dateString: string | null | undefined) {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    return date.toLocaleDateString("en-US", {
       weekday: "long",
       year: "numeric",
       month: "long",
       day: "numeric",
+    });
+  }
+
+  // Format short date (for verified date)
+  function formatShortDate(dateString: string | null | undefined) {
+    if (!dateString) return null;
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return null;
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   }
 
@@ -259,6 +289,18 @@ export default function PacketDownloadPage() {
   const hasNoticeLetter = caseData?.documents.some(d => d.type === "NOTICE_LETTER");
   const hasItemizedStatement = caseData?.documents.some(d => d.type === "ITEMIZED_STATEMENT");
 
+  // Get location display text (fixes ", CA" bug)
+  function getLocationText() {
+    if (!caseData) return "";
+    const { city, state } = caseData.property;
+    const stateName = STATE_NAMES[state] || state;
+
+    if (city && city.trim()) {
+      return `${city}, ${state}`;
+    }
+    return stateName;
+  }
+
   // Coverage level text
   function getCoverageText() {
     const level = caseData?.property.jurisdiction.coverageLevel;
@@ -294,6 +336,9 @@ export default function PacketDownloadPage() {
       </div>
     );
   }
+
+  // Get verified date with fallback
+  const verifiedDate = formatShortDate(caseData.ruleSet.lastVerified);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
@@ -335,7 +380,7 @@ export default function PacketDownloadPage() {
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2 text-sm font-medium">
                 <MapPin className="h-4 w-4" />
-                {caseData.property.city}, {caseData.property.state}
+                {getLocationText()}
               </div>
               <div className="flex items-center gap-1.5">
                 <Clock className="h-4 w-4" />
@@ -349,7 +394,7 @@ export default function PacketDownloadPage() {
               </div>
             </div>
             <p className="text-lg font-bold">
-              Deadline: {formatDate(caseData.dueDate)}
+              Deadline: {formatDate(caseData.dueDate) || "Not set"}
             </p>
             <p className="text-sm mt-1">
               {caseData.property.address}
@@ -363,10 +408,12 @@ export default function PacketDownloadPage() {
             <Scale className="h-3 w-3" />
             {getCoverageText()}
           </span>
-          <span>•</span>
-          <span>
-            Verified {new Date(caseData.ruleSet.lastVerified).toLocaleDateString()}
-          </span>
+          {verifiedDate && (
+            <>
+              <span>•</span>
+              <span>Verified {verifiedDate}</span>
+            </>
+          )}
           {caseData.ruleSet.citations.length > 0 && (
             <>
               <span>•</span>
@@ -387,7 +434,7 @@ export default function PacketDownloadPage() {
           )}
         </div>
 
-        {/* Draft Warning */}
+        {/* Draft Warning - only show if truly incomplete */}
         {isDraft && (
           <Card className="mb-6 bg-amber-50 border-amber-200">
             <CardContent className="p-4">
@@ -395,7 +442,7 @@ export default function PacketDownloadPage() {
                 <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-medium text-amber-800 text-sm">
-                    These are draft PDFs
+                    Complete your case for final documents
                   </p>
                   <p className="text-amber-700 text-xs mt-1">
                     {!hasTenants && "Add tenant name/address. "}
@@ -404,7 +451,7 @@ export default function PacketDownloadPage() {
                       href={`/cases/${caseId}`}
                       className="underline font-medium"
                     >
-                      Complete in full case →
+                      Open full case →
                     </Link>
                   </p>
                 </div>
