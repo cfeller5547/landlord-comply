@@ -718,36 +718,47 @@ function StartPageContent() {
               </div>
 
               {/* Sticky Bottom Bar - Email Capture CTA */}
-              <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
-                <div className="container mx-auto px-4 py-3">
-                  <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-3">
-                    <div className="flex-1 text-center sm:text-left">
-                      <p className="text-sm font-medium text-slate-900">
-                        Want the compliant PDF + deadline reminders?
-                      </p>
-                      <p className="text-xs text-muted-foreground hidden sm:block">
-                        Enter email to save your case and unlock all features
-                      </p>
+              <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-primary via-primary to-primary/90 shadow-[0_-4px_20px_rgba(0,0,0,0.15)] z-50">
+                <div className="container mx-auto px-4 py-4">
+                  <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-4">
+                    {/* Left side - Value prop */}
+                    <div className="flex-1 flex items-center gap-3">
+                      <div className="hidden sm:flex h-10 w-10 rounded-full bg-white/20 items-center justify-center shrink-0">
+                        <FileText className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="text-center sm:text-left">
+                        <p className="text-sm sm:text-base font-semibold text-white">
+                          Get your compliant notice PDF + deadline reminders
+                        </p>
+                        <p className="text-xs text-white/80 hidden sm:block">
+                          Save this case to your account — free during beta
+                        </p>
+                      </div>
                     </div>
+
+                    {/* Right side - Email capture */}
                     <div className="flex items-center gap-2 w-full sm:w-auto">
-                      <Input
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="h-10 w-full sm:w-56"
-                      />
+                      <div className="relative flex-1 sm:flex-none">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          type="email"
+                          placeholder="you@example.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="h-11 pl-9 w-full sm:w-56 bg-white border-0 shadow-md focus:ring-2 focus:ring-white/50"
+                        />
+                      </div>
                       <Button
                         onClick={handleSendEmail}
                         disabled={emailSending || !email}
-                        className="h-10 whitespace-nowrap"
+                        className="h-11 px-5 bg-amber-500 hover:bg-amber-400 text-amber-950 font-semibold shadow-md whitespace-nowrap"
                       >
                         {emailSending ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
                             Save Case
-                            <ArrowRight className="h-4 w-4 ml-1" />
+                            <ArrowRight className="h-4 w-4 ml-1.5" />
                           </>
                         )}
                       </Button>
