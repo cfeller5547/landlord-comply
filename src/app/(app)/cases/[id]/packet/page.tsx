@@ -17,6 +17,8 @@ import {
   Package,
   ExternalLink,
   MapPin,
+  Scale,
+  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -39,7 +41,20 @@ interface CaseData {
   ruleSet: {
     returnDeadlineDays: number;
     allowedDeliveryMethods: string[];
+    version: string;
+    lastVerified: string;
+    citations: Array<{
+      id: string;
+      code: string;
+      title: string | null;
+      url: string | null;
+    }>;
   };
+  tenants: Array<{
+    id: string;
+    name: string;
+    email: string | null;
+  }>;
   documents: Array<{
     id: string;
     type: string;
@@ -64,6 +79,7 @@ export default function PacketDownloadPage() {
 
   const [generatingNotice, setGeneratingNotice] = useState(false);
   const [generatingItemized, setGeneratingItemized] = useState(false);
+  const [generatingBoth, setGeneratingBoth] = useState(false);
   const [downloadingPacket, setDownloadingPacket] = useState(false);
 
   // Fetch case data on mount
@@ -98,6 +114,11 @@ export default function PacketDownloadPage() {
         (new Date(caseData.dueDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
       )
     : 0;
+
+  // Check if documents are "drafts" (missing key info)
+  const hasTenants = caseData && caseData.tenants.length > 0;
+  const hasDeductions = caseData && caseData.deductions.length > 0;
+  const isDraft = !hasTenants || !hasDeductions;
 
   // Format date
   function formatDate(dateString: string) {
@@ -160,6 +181,50 @@ export default function PacketDownloadPage() {
     }
   }
 
+  // Download both PDFs
+  async function handleDownloadBoth() {
+    setGeneratingBoth(true);
+
+    try {
+      // Generate both documents sequentially
+      for (const type of ["notice_letter", "itemized_statement"] as const) {
+        const response = await fetch(`/api/cases/${caseId}/documents/generate`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || `Failed to generate ${type}`);
+        }
+
+        const blob = await response.blob();
+        const fileName = response.headers.get("Content-Disposition")?.split("filename=")[1]?.replace(/"/g, "")
+          || `${type.replace("_", "-")}.pdf`;
+
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }
+
+      // Refresh case data
+      const caseResponse = await fetch(`/api/cases/${caseId}`);
+      if (caseResponse.ok) {
+        setCaseData(await caseResponse.json());
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to download. Please try again.");
+    } finally {
+      setGeneratingBoth(false);
+    }
+  }
+
   // Download proof packet ZIP
   async function handleDownloadPacket() {
     setDownloadingPacket(true);
@@ -194,6 +259,14 @@ export default function PacketDownloadPage() {
   const hasNoticeLetter = caseData?.documents.some(d => d.type === "NOTICE_LETTER");
   const hasItemizedStatement = caseData?.documents.some(d => d.type === "ITEMIZED_STATEMENT");
 
+  // Coverage level text
+  function getCoverageText() {
+    const level = caseData?.property.jurisdiction.coverageLevel;
+    if (level === "FULL") return "State + City rules";
+    if (level === "PARTIAL") return "Partial coverage";
+    return "State rules only";
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white flex items-center justify-center">
@@ -224,12 +297,19 @@ export default function PacketDownloadPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white">
-      {/* Header */}
+      {/* Minimal Header - just logo + help */}
       <header className="border-b bg-white/80 backdrop-blur-sm">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2">
             <Shield className="h-6 w-6 text-primary" />
             <span className="font-semibold text-lg">LandlordComply</span>
+          </Link>
+          <Link
+            href="/contact"
+            className="text-sm text-muted-foreground hover:text-primary flex items-center gap-1"
+          >
+            <HelpCircle className="h-4 w-4" />
+            Need help?
           </Link>
         </div>
       </header>
@@ -245,12 +325,12 @@ export default function PacketDownloadPage() {
             Your Packet is Ready
           </h1>
           <p className="text-muted-foreground">
-            Download your compliant documents below
+            Download, print, and mail to your tenant
           </p>
         </div>
 
         {/* Deadline Card */}
-        <Card className={cn("mb-6 border-2", getDeadlineColor())}>
+        <Card className={cn("mb-4 border-2", getDeadlineColor())}>
           <CardContent className="p-5">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2 text-sm font-medium">
@@ -277,60 +357,153 @@ export default function PacketDownloadPage() {
           </CardContent>
         </Card>
 
-        {/* Download Buttons */}
+        {/* Trust/Citation Line */}
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground mb-6 px-1">
+          <span className="flex items-center gap-1">
+            <Scale className="h-3 w-3" />
+            {getCoverageText()}
+          </span>
+          <span>•</span>
+          <span>
+            Verified {new Date(caseData.ruleSet.lastVerified).toLocaleDateString()}
+          </span>
+          {caseData.ruleSet.citations.length > 0 && (
+            <>
+              <span>•</span>
+              <span className="flex items-center gap-1">
+                Source: {caseData.ruleSet.citations[0].code}
+                {caseData.ruleSet.citations[0].url && (
+                  <a
+                    href={caseData.ruleSet.citations[0].url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                )}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Draft Warning */}
+        {isDraft && (
+          <Card className="mb-6 bg-amber-50 border-amber-200">
+            <CardContent className="p-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-medium text-amber-800 text-sm">
+                    These are draft PDFs
+                  </p>
+                  <p className="text-amber-700 text-xs mt-1">
+                    {!hasTenants && "Add tenant name/address. "}
+                    {!hasDeductions && "Add your deductions. "}
+                    <Link
+                      href={`/cases/${caseId}`}
+                      className="underline font-medium"
+                    >
+                      Complete in full case →
+                    </Link>
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Download Card */}
         <Card className="mb-6">
           <CardContent className="p-6">
-            <h2 className="font-semibold text-lg mb-4 flex items-center gap-2">
-              <Package className="h-5 w-5 text-primary" />
-              Download Your Documents
-            </h2>
+            {/* Primary: Download Both */}
+            <Button
+              onClick={handleDownloadBoth}
+              disabled={generatingBoth || generatingNotice || generatingItemized}
+              className="w-full h-14 text-base mb-4"
+              size="lg"
+            >
+              {generatingBoth ? (
+                <>
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                  Generating PDFs...
+                </>
+              ) : (
+                <>
+                  <Download className="h-5 w-5 mr-2" />
+                  Download Both PDFs
+                </>
+              )}
+            </Button>
 
-            <div className="space-y-3">
+            {/* Divider */}
+            <div className="relative py-3">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-white px-3 text-xs text-muted-foreground">
+                  or download individually
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-3 mt-3">
               {/* Notice Letter */}
-              <Button
-                onClick={() => handleDownload("notice_letter")}
-                disabled={generatingNotice}
-                className="w-full h-14 justify-between text-base"
-                variant={hasNoticeLetter ? "outline" : "default"}
-              >
-                <span className="flex items-center gap-3">
-                  <FileText className="h-5 w-5" />
-                  <span>
-                    <span className="font-semibold">Notice Letter</span>
-                    <span className="text-xs ml-2 opacity-75">
-                      {hasNoticeLetter ? "(regenerate)" : ""}
+              <div>
+                <Button
+                  onClick={() => handleDownload("notice_letter")}
+                  disabled={generatingNotice || generatingBoth}
+                  variant="outline"
+                  className="w-full h-auto py-3 justify-between text-left"
+                >
+                  <span className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-slate-500" />
+                    <span className="flex flex-col items-start">
+                      <span className="font-semibold text-sm">
+                        Security Deposit Disposition Letter
+                        {hasNoticeLetter && <span className="text-xs font-normal text-muted-foreground ml-1">(update)</span>}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-normal">
+                        Print + mail (keep delivery proof)
+                      </span>
                     </span>
                   </span>
-                </span>
-                {generatingNotice ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Download className="h-5 w-5" />
-                )}
-              </Button>
+                  {generatingNotice ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
 
               {/* Itemized Statement */}
-              <Button
-                onClick={() => handleDownload("itemized_statement")}
-                disabled={generatingItemized}
-                className="w-full h-14 justify-between text-base"
-                variant={hasItemizedStatement ? "outline" : "default"}
-              >
-                <span className="flex items-center gap-3">
-                  <FileText className="h-5 w-5" />
-                  <span>
-                    <span className="font-semibold">Itemized Statement</span>
-                    <span className="text-xs ml-2 opacity-75">
-                      {hasItemizedStatement ? "(regenerate)" : ""}
+              <div>
+                <Button
+                  onClick={() => handleDownload("itemized_statement")}
+                  disabled={generatingItemized || generatingBoth}
+                  variant="outline"
+                  className="w-full h-auto py-3 justify-between text-left"
+                >
+                  <span className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-slate-500" />
+                    <span className="flex flex-col items-start">
+                      <span className="font-semibold text-sm">
+                        Itemized Deductions Statement
+                        {hasItemizedStatement && <span className="text-xs font-normal text-muted-foreground ml-1">(update)</span>}
+                      </span>
+                      <span className="text-xs text-muted-foreground font-normal">
+                        Attach receipts/invoices if required
+                      </span>
                     </span>
                   </span>
-                </span>
-                {generatingItemized ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Download className="h-5 w-5" />
-                )}
-              </Button>
+                  {generatingItemized ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
 
               {/* Divider */}
               <div className="relative py-2">
@@ -339,7 +512,7 @@ export default function PacketDownloadPage() {
                 </div>
                 <div className="relative flex justify-center">
                   <span className="bg-white px-3 text-xs text-muted-foreground">
-                    or download everything
+                    for your records
                   </span>
                 </div>
               </div>
@@ -349,70 +522,52 @@ export default function PacketDownloadPage() {
                 onClick={handleDownloadPacket}
                 disabled={downloadingPacket}
                 variant="secondary"
-                className="w-full h-14 justify-between text-base"
+                className="w-full h-auto py-3 justify-between text-left"
               >
                 <span className="flex items-center gap-3">
                   <Package className="h-5 w-5" />
-                  <span>
-                    <span className="font-semibold">Full Proof Packet</span>
-                    <span className="text-xs ml-2 opacity-75">(ZIP with all docs + audit trail)</span>
+                  <span className="flex flex-col items-start">
+                    <span className="font-semibold text-sm">Full Proof Packet (ZIP)</span>
+                    <span className="text-xs text-muted-foreground font-normal">
+                      All docs + audit trail for disputes
+                    </span>
                   </span>
                 </span>
                 {downloadingPacket ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  <Download className="h-5 w-5" />
+                  <Download className="h-4 w-4" />
                 )}
               </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* What's included */}
-        <Card className="mb-6 bg-slate-50 border-slate-200">
-          <CardContent className="p-5">
-            <h3 className="font-medium text-sm text-slate-700 mb-3">
-              Your documents include:
-            </h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                Compliant notice letter for {caseData.property.state}
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                Itemized deduction statement
-                {caseData.deductions.length > 0 && ` (${caseData.deductions.length} deductions)`}
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
-                Legal citations and deadline calculations
-              </li>
-            </ul>
-          </CardContent>
-        </Card>
-
         {/* Delivery reminder */}
-        <Card className="mb-6 bg-amber-50 border-amber-200">
-          <CardContent className="p-5">
-            <h3 className="font-medium text-sm text-amber-800 mb-2">
-              Remember to keep delivery proof:
+        <Card className="mb-6 bg-slate-50 border-slate-200">
+          <CardContent className="p-4">
+            <h3 className="font-medium text-sm text-slate-800 mb-2 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              After downloading:
             </h3>
-            <p className="text-sm text-amber-700">
-              Send via{" "}
-              <strong>
-                {caseData.ruleSet.allowedDeliveryMethods
-                  .slice(0, 2)
-                  .map(m => m.replace(/_/g, " "))
-                  .join(" or ")}
-              </strong>{" "}
-              and save your receipt/tracking number.
-            </p>
+            <ol className="text-sm text-muted-foreground space-y-1 ml-6 list-decimal">
+              <li>Print both documents</li>
+              <li>
+                Mail via{" "}
+                <strong className="text-slate-700">
+                  {caseData.ruleSet.allowedDeliveryMethods
+                    .slice(0, 2)
+                    .map(m => m.replace(/_/g, " ").toLowerCase())
+                    .join(" or ")}
+                </strong>
+              </li>
+              <li>Save your receipt/tracking number as proof</li>
+            </ol>
           </CardContent>
         </Card>
 
         {/* Open Full Case Link */}
-        <div className="text-center space-y-4">
+        <div className="text-center space-y-3">
           <Button
             onClick={() => router.push(`/cases/${caseId}`)}
             variant="outline"
@@ -423,17 +578,15 @@ export default function PacketDownloadPage() {
           </Button>
 
           <p className="text-xs text-muted-foreground">
-            Add deductions, upload receipts, track delivery, and more
+            Add deductions, upload receipts, track delivery status
           </p>
         </div>
 
         {/* Footer */}
         <div className="mt-12 pt-6 border-t text-center">
           <p className="text-xs text-muted-foreground">
-            Questions?{" "}
-            <Link href="/contact" className="text-primary hover:underline">
-              Contact us
-            </Link>
+            <Scale className="h-3 w-3 inline mr-1" />
+            Educational tool only. Not legal advice.
             {" · "}
             <Link href="/" className="text-primary hover:underline">
               landlordcomply.com
