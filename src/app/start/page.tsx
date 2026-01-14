@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -34,6 +35,8 @@ import {
   Send,
   Upload,
   Bell,
+  FlaskConical,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -236,9 +239,10 @@ function StartPageContent() {
             <Shield className="h-6 w-6 text-primary" />
             <span className="font-semibold text-lg">LandlordComply</span>
           </Link>
-          <div className="text-sm text-muted-foreground">
-            Free deadline calculator
-          </div>
+          <Badge variant="secondary" className="gap-1.5 bg-primary/10 text-primary border-primary/20">
+            <FlaskConical className="h-3 w-3" />
+            Beta: Deadline + Packet
+          </Badge>
         </div>
       </header>
 
@@ -254,23 +258,35 @@ function StartPageContent() {
       <div className="container mx-auto px-4 py-6">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-center gap-2 mb-8">
-            {[1, 2, 3].map((s) => (
-              <div key={s} className="flex items-center">
-                <div
-                  className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
-                    step >= s
-                      ? "bg-primary text-white"
-                      : "bg-slate-200 text-slate-500"
-                  )}
-                >
-                  {step > s ? <Check className="h-4 w-4" /> : s}
-                </div>
-                {s < 3 && (
+            {[
+              { num: 1, label: "Details" },
+              { num: 2, label: "Results" },
+              { num: 3, label: "Access" },
+            ].map((s, idx) => (
+              <div key={s.num} className="flex items-center">
+                <div className="flex flex-col items-center">
                   <div
                     className={cn(
-                      "w-16 h-1 mx-2",
-                      step > s ? "bg-primary" : "bg-slate-200"
+                      "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors",
+                      step >= s.num
+                        ? "bg-primary text-white"
+                        : "bg-slate-200 text-slate-500"
+                    )}
+                  >
+                    {step > s.num ? <Check className="h-4 w-4" /> : s.num}
+                  </div>
+                  <span className={cn(
+                    "text-xs mt-1 font-medium",
+                    step >= s.num ? "text-primary" : "text-muted-foreground"
+                  )}>
+                    {s.label}
+                  </span>
+                </div>
+                {idx < 2 && (
+                  <div
+                    className={cn(
+                      "w-12 sm:w-16 h-1 mx-2 mb-5",
+                      step > s.num ? "bg-primary" : "bg-slate-200"
                     )}
                   />
                 )}
@@ -310,12 +326,16 @@ function StartPageContent() {
                       onChange={(e) => setAddress(e.target.value)}
                       className="h-12"
                     />
+                    <p className="text-xs text-muted-foreground">
+                      Street + unit is fine for now
+                    </p>
                   </div>
 
                   {/* State */}
                   <div className="space-y-2">
-                    <Label htmlFor="state">
+                    <Label htmlFor="state" className="flex items-center gap-2">
                       State <span className="text-red-500">*</span>
+                      <span className="text-xs text-muted-foreground font-normal">(required for rules lookup)</span>
                     </Label>
                     <Select value={state} onValueChange={(v) => { setState(v); setCity(""); }}>
                       <SelectTrigger className="h-12">
@@ -657,7 +677,7 @@ function StartPageContent() {
                     <Button
                       onClick={handleSendEmail}
                       disabled={emailSending || !email}
-                      className="w-full h-12 text-base"
+                      className="w-full h-12 text-base bg-primary hover:bg-primary/90"
                       size="lg"
                     >
                       {emailSending ? (
@@ -667,18 +687,18 @@ function StartPageContent() {
                         </>
                       ) : (
                         <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Send Me My Secure Access Link
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Save My Case + Get Access Link
                         </>
                       )}
                     </Button>
 
                     <div className="text-center space-y-1">
                       <p className="text-xs text-muted-foreground">
-                        No password required. We'll send a secure link.
+                        No password required. We'll email a secure access link.
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        We only email you about this case + reminders you request.
+                        We only email about this case + reminders you opt into.
                       </p>
                     </div>
                   </div>
@@ -686,7 +706,7 @@ function StartPageContent() {
               </Card>
 
               {/* Back Button */}
-              <div className="text-center">
+              <div className="text-center pb-24">
                 <Button
                   variant="ghost"
                   onClick={() => setStep(1)}
@@ -695,6 +715,45 @@ function StartPageContent() {
                   <ArrowLeft className="h-4 w-4 mr-2" />
                   Start Over
                 </Button>
+              </div>
+
+              {/* Sticky Bottom Bar - Email Capture CTA */}
+              <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg z-50">
+                <div className="container mx-auto px-4 py-3">
+                  <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-3">
+                    <div className="flex-1 text-center sm:text-left">
+                      <p className="text-sm font-medium text-slate-900">
+                        Want the compliant PDF + deadline reminders?
+                      </p>
+                      <p className="text-xs text-muted-foreground hidden sm:block">
+                        Enter email to save your case and unlock all features
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <Input
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="h-10 w-full sm:w-56"
+                      />
+                      <Button
+                        onClick={handleSendEmail}
+                        disabled={emailSending || !email}
+                        className="h-10 whitespace-nowrap"
+                      >
+                        {emailSending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <>
+                            Save Case
+                            <ArrowRight className="h-4 w-4 ml-1" />
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           )}
