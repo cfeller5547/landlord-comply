@@ -868,6 +868,8 @@ function StartPageContent() {
 
                         <p className="text-xs text-center text-muted-foreground">
                           We&apos;ll send one email with your secure packet link. No spam, ever.
+                          <br />
+                          <span className="text-amber-600 font-medium">Check your spam folder if you don&apos;t see it.</span>
                         </p>
                       </div>
                     </div>
@@ -888,10 +890,25 @@ function StartPageContent() {
                 <h2 className="text-2xl font-bold text-slate-900 mb-2">
                   Check Your Email
                 </h2>
-                <p className="text-muted-foreground mb-6">
+                <p className="text-muted-foreground mb-4">
                   We sent a secure access link to{" "}
                   <span className="font-medium text-slate-900">{maskedEmail}</span>
                 </p>
+
+                {/* Spam folder warning */}
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 text-left">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-amber-800 text-sm">
+                        Don&apos;t see it? Check your spam folder
+                      </p>
+                      <p className="text-amber-700 text-xs mt-1">
+                        The email may take a minute to arrive. Look for &quot;LandlordComply&quot; in spam/junk if you don&apos;t see it in your inbox.
+                      </p>
+                    </div>
+                  </div>
+                </div>
 
                 <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
                   <h3 className="font-medium text-slate-900 mb-2">
