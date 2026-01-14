@@ -92,6 +92,7 @@ model Jurisdiction {
   // Relations
   properties      Property[]
   ruleSets        RuleSet[]
+  draftCases      DraftCase[]
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -521,4 +522,58 @@ enum FeedbackStatus {
   IN_PROGRESS     // Being worked on
   RESOLVED        // Issue resolved
   WONT_FIX        // Won't be addressed
+}
+
+// ============================================
+// BETA ENTRY FLOW (Draft Cases)
+// ============================================
+
+model DraftCase {
+  id              String    @id @default(cuid())
+
+  // Source tracking
+  utmSource       String?
+  utmCampaign     String?
+  utmMedium       String?
+
+  // User inputs
+  addressRaw      String
+  city            String?
+  state           String?
+  moveOutDate     DateTime
+  depositAmount   Decimal?  @db.Decimal(10, 2)
+
+  // Resolved data
+  jurisdictionId  String?
+  jurisdiction    Jurisdiction? @relation(fields: [jurisdictionId], references: [id])
+  ruleSetId       String?
+
+  // Computed preview (cached)
+  previewJson     Json?     // deadline, checklist, delivery methods, citations, etc.
+
+  // Email/conversion tracking
+  email           String?
+  emailHash       String?   // For rate limiting without storing plain email
+  emailSentAt     DateTime?
+
+  // Status
+  status          DraftCaseStatus @default(PREVIEW_GENERATED)
+  claimedByUserId String?
+  claimedAt       DateTime?
+
+  // Lifecycle
+  expiresAt       DateTime
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([status, expiresAt])
+  @@map("draft_cases")
+}
+
+enum DraftCaseStatus {
+  PREVIEW_GENERATED   // Initial preview shown
+  EMAIL_SENT          // Magic link sent
+  CLAIMED             // User clicked link and case created
+  EXPIRED             // Draft expired without conversion
 }
