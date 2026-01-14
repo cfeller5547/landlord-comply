@@ -315,8 +315,10 @@ export async function POST(request: Request) {
     }
 
     // Build the redirect URL with draft ID
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ||
-      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+    // Prefer VERCEL_URL in production (auto-set by Vercel), fall back to NEXT_PUBLIC_APP_URL for local dev
+    const baseUrl = process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : (process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000");
     const redirectTo = `${baseUrl}/start/complete?draftId=${draftId}`;
 
     // Create Supabase Admin client with service role key
