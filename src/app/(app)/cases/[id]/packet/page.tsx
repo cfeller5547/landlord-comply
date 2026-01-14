@@ -30,15 +30,15 @@ interface CaseData {
     address: string;
     city: string;
     state: string;
+    jurisdiction: {
+      state: string;
+      city: string | null;
+      coverageLevel: string;
+    };
   };
   ruleSet: {
     returnDeadlineDays: number;
     allowedDeliveryMethods: string[];
-  };
-  jurisdiction: {
-    state: string;
-    city: string | null;
-    coverageLevel: string;
   };
   documents: Array<{
     id: string;
@@ -46,9 +46,11 @@ interface CaseData {
     version: number;
     generatedAt: string;
   }>;
-  _count: {
-    deductions: number;
-  };
+  deductions: Array<{
+    id: string;
+    description: string;
+    amount: number;
+  }>;
 }
 
 export default function PacketDownloadPage() {
@@ -380,7 +382,7 @@ export default function PacketDownloadPage() {
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
                 Itemized deduction statement
-                {caseData._count.deductions > 0 && ` (${caseData._count.deductions} deductions)`}
+                {caseData.deductions.length > 0 && ` (${caseData.deductions.length} deductions)`}
               </li>
               <li className="flex items-start gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
