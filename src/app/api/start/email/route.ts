@@ -71,8 +71,10 @@ function generateEmailHtml(preview: {
     ? `${preview.jurisdiction.city}, ${preview.jurisdiction.state}`
     : preview.jurisdiction.state;
 
-  // Get top 3 checklist items for email
-  const keySteps = preview.checklist.slice(0, 3);
+  // Format delivery methods for display
+  const deliveryMethodsFormatted = preview.rules.allowedDeliveryMethods
+    .map(m => m === "certified_mail" ? "Certified Mail" : m === "first_class_mail" ? "First Class Mail" : m === "hand_delivery" ? "Hand Delivery" : m === "email" ? "Email (if agreed)" : m.replace(/_/g, ' '))
+    .slice(0, 3);
 
   return `
 <!DOCTYPE html>
@@ -119,7 +121,7 @@ function generateEmailHtml(preview: {
 
         <!-- Greeting -->
         <h1 style="margin:0 0 8px 0;font-size:22px;color:#0f172a;font-weight:700;">
-          Your security deposit deadline is saved
+          Your security deposit packet is ready
         </h1>
         <p style="margin:0 0 20px 0;font-size:14px;color:#64748b;">
           Property: ${address || "Your rental property"}
@@ -128,75 +130,96 @@ function generateEmailHtml(preview: {
         <!-- Deadline Card -->
         <div style="padding:20px;background:${deadlineBgColor};border:1px solid ${deadlineBorderColor};border-radius:12px;margin-bottom:20px;">
           <p style="margin:0 0 4px 0;font-size:11px;font-weight:700;color:${deadlineColor};text-transform:uppercase;letter-spacing:0.5px;">
-            ⏰ DEADLINE
+            ⏰ YOUR DEADLINE
           </p>
           <p style="margin:0 0 8px 0;font-size:24px;font-weight:800;color:${deadlineColor};">
             ${formatDate(preview.deadline.date)}
           </p>
           <p style="margin:0;font-size:13px;color:${deadlineColor};">
-            <strong>${preview.deadline.daysRemaining} days remaining</strong> · ${preview.deadline.deadlineDays} days from move-out
+            <strong>${preview.deadline.daysRemaining} days remaining</strong> · ${preview.deadline.deadlineDays}-day rule in ${locationText}
           </p>
         </div>
 
-        <!-- Location & Coverage -->
-        <div style="padding:14px 16px;background:#f1f5f9;border-radius:10px;margin-bottom:20px;">
+        <!-- What You Get Section -->
+        <div style="padding:20px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:12px;margin-bottom:20px;">
+          <p style="margin:0 0 12px 0;font-size:14px;font-weight:700;color:#0c4a6e;">
+            📄 Your packet includes:
+          </p>
           <table cellpadding="0" cellspacing="0" border="0" width="100%">
             <tr>
-              <td style="font-size:13px;color:#475569;">
-                📍 ${locationText}
+              <td style="padding:6px 0;font-size:13px;color:#0369a1;">✓ <strong>Notice Letter</strong> — compliant for ${preview.jurisdiction.state}</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;font-size:13px;color:#0369a1;">✓ <strong>Itemized Statement</strong> — deduction breakdown with totals</td>
+            </tr>
+            <tr>
+              <td style="padding:6px 0;font-size:13px;color:#0369a1;">✓ <strong>Proof Packet</strong> — audit trail + evidence for disputes</td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- Primary CTA: Download PDFs -->
+        <div style="text-align:center;margin-bottom:16px;">
+          <a href="${actionLink}" style="display:inline-block;background:#0d5c73;color:#ffffff;text-decoration:none;padding:16px 32px;border-radius:10px;font-weight:700;font-size:16px;">
+            Download Your PDFs →
+          </a>
+        </div>
+
+        <!-- Secondary CTA -->
+        <div style="text-align:center;margin-bottom:24px;">
+          <a href="${actionLink}" style="font-size:13px;color:#0d5c73;text-decoration:underline;">
+            Or open case to add deductions & upload receipts
+          </a>
+          <p style="margin:8px 0 0 0;font-size:11px;color:#94a3b8;">
+            No password required — this link signs you in securely
+          </p>
+        </div>
+
+        <!-- Delivery & Proof Requirements -->
+        <div style="padding:16px;background:#fefce8;border:1px solid #fde047;border-radius:10px;margin-bottom:20px;">
+          <p style="margin:0 0 10px 0;font-size:13px;font-weight:700;color:#854d0e;">
+            📬 How to send it (required for proof):
+          </p>
+          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td style="font-size:12px;color:#a16207;padding:4px 0;">
+                <strong>Allowed methods:</strong> ${deliveryMethodsFormatted.join(' · ')}
               </td>
-              <td align="right">
-                <span style="display:inline-block;font-size:11px;color:#0f172a;padding:4px 10px;background:#e2e8f0;border-radius:999px;font-weight:600;">
-                  ${coverageText}
-                </span>
+            </tr>
+            <tr>
+              <td style="font-size:12px;color:#a16207;padding:4px 0;">
+                <strong>Keep proof:</strong> USPS receipt, certified mail slip, or delivery confirmation
               </td>
             </tr>
           </table>
         </div>
 
-        <!-- Key Steps -->
-        <h2 style="margin:0 0 12px 0;font-size:15px;color:#0f172a;font-weight:700;">
-          What you must do (minimum):
-        </h2>
-        <table cellpadding="0" cellspacing="0" border="0" width="100%" style="margin-bottom:20px;">
-          ${keySteps.map((step, i) => `
-          <tr>
-            <td style="padding:8px 0;vertical-align:top;width:28px;">
-              <div style="width:22px;height:22px;background:#0d5c73;border-radius:50%;color:#fff;font-size:12px;font-weight:700;text-align:center;line-height:22px;">${i + 1}</div>
-            </td>
-            <td style="padding:8px 0 8px 8px;vertical-align:top;">
-              <p style="margin:0;font-size:13px;color:#0f172a;"><strong>${step.label}</strong></p>
-              ${step.description ? `<p style="margin:4px 0 0 0;font-size:12px;color:#64748b;">${step.description}</p>` : ''}
-            </td>
-          </tr>
-          `).join('')}
-        </table>
-
         <!-- Key Requirements Chips -->
-        <div style="margin-bottom:24px;">
+        <div style="margin-bottom:20px;">
           ${preview.rules.itemizationRequired ? `<span style="display:inline-block;font-size:11px;color:#1e40af;background:#dbeafe;padding:6px 12px;border-radius:999px;margin:0 6px 6px 0;font-weight:600;">✓ Itemization required</span>` : ''}
-          ${preview.rules.interestRequired ? `<span style="display:inline-block;font-size:11px;color:#92400e;background:#fef3c7;padding:6px 12px;border-radius:999px;margin:0 6px 6px 0;font-weight:600;">$ Interest: ${preview.rules.interestRate ? (preview.rules.interestRate * 100).toFixed(1) + '%' : 'Required'}</span>` : ''}
-          <span style="display:inline-block;font-size:11px;color:#475569;background:#f1f5f9;padding:6px 12px;border-radius:999px;margin:0 6px 6px 0;font-weight:600;">📬 ${preview.rules.allowedDeliveryMethods.slice(0, 2).join(', ')}</span>
+          ${preview.rules.interestRequired ? `<span style="display:inline-block;font-size:11px;color:#92400e;background:#fef3c7;padding:6px 12px;border-radius:999px;margin:0 6px 6px 0;font-weight:600;">$ Interest: ${preview.rules.interestRate ? (preview.rules.interestRate * 100).toFixed(1) + '%/yr' : 'Required'}</span>` : ''}
+          <span style="display:inline-block;font-size:11px;color:#166534;background:#dcfce7;padding:6px 12px;border-radius:999px;margin:0 6px 6px 0;font-weight:600;">${coverageText}</span>
         </div>
 
-        <!-- CTA Button -->
-        <div style="text-align:center;margin-bottom:20px;">
-          <a href="${actionLink}" style="display:inline-block;background:#0d5c73;color:#ffffff;text-decoration:none;padding:14px 28px;border-radius:10px;font-weight:700;font-size:15px;">
-            Open Your Saved Case →
-          </a>
-          <p style="margin:12px 0 0 0;font-size:12px;color:#64748b;">
-            No password required — this link signs you in securely
+        <!-- Quick Checklist -->
+        <div style="padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+          <p style="margin:0 0 10px 0;font-size:13px;font-weight:700;color:#334155;">
+            ✅ Before sending, make sure you:
           </p>
-        </div>
-
-        <!-- What's Inside -->
-        <div style="padding:16px;background:#f0fdfa;border:1px solid #99f6e4;border-radius:10px;">
-          <p style="margin:0 0 8px 0;font-size:13px;font-weight:700;color:#0f172a;">
-            📦 Inside your saved case:
-          </p>
-          <p style="margin:0;font-size:12px;color:#475569;line-height:1.6;">
-            Generate compliant PDFs (notice letter + itemized statement), add deductions, upload receipts/photos, track delivery proof, and export a dispute-ready packet.
-          </p>
+          <table cellpadding="0" cellspacing="0" border="0" width="100%">
+            <tr>
+              <td style="padding:4px 0;font-size:12px;color:#64748b;">☐ Added all deductions with receipts/photos</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 0;font-size:12px;color:#64748b;">☐ Downloaded and reviewed your Notice Letter</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 0;font-size:12px;color:#64748b;">☐ Got tenant's forwarding address (or documented attempt)</td>
+            </tr>
+            <tr>
+              <td style="padding:4px 0;font-size:12px;color:#64748b;">☐ Planned delivery method + saved proof</td>
+            </tr>
+          </table>
         </div>
 
       </div>
@@ -204,7 +227,7 @@ function generateEmailHtml(preview: {
       <!-- Footer -->
       <div style="padding:16px 24px;background:#f8fafc;border-top:1px solid #e2e8f0;">
         <p style="margin:0 0 4px 0;font-size:11px;color:#94a3b8;text-align:center;">
-          Rules v${preview.ruleSetVersion} · Last verified ${new Date(preview.lastVerified).toLocaleDateString()}
+          Rules v${preview.ruleSetVersion} · Last verified ${new Date(preview.lastVerified).toLocaleDateString()} · <a href="https://landlordcomply.com/coverage" style="color:#64748b;">View sources</a>
         </p>
         <p style="margin:0;font-size:11px;color:#94a3b8;text-align:center;">
           © ${new Date().getFullYear()} LandlordComply · <a href="https://landlordcomply.com" style="color:#64748b;">landlordcomply.com</a>
@@ -369,7 +392,7 @@ export async function POST(request: Request) {
       const { error: sendError } = await resend.emails.send({
         from: process.env.RESEND_FROM_EMAIL || "LandlordComply <onboarding@resend.dev>",
         to: email.toLowerCase(),
-        subject: `Your deposit deadline: ${formatDate(preview.deadline.date)} (${preview.deadline.daysRemaining} days left)`,
+        subject: `Your deposit packet is ready — ${preview.deadline.daysRemaining} days left to send`,
         html: emailHtml,
       });
 
