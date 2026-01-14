@@ -118,6 +118,41 @@ function StartPageContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Auth error state (from expired/invalid magic links)
+  const [authError, setAuthError] = useState<{
+    code: string;
+    message: string;
+  } | null>(null);
+
+  // Check for auth errors in URL hash on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const hash = window.location.hash;
+      if (hash.includes("error=")) {
+        // Parse hash parameters
+        const hashParams = new URLSearchParams(hash.substring(1));
+        const errorCode = hashParams.get("error_code") || hashParams.get("error") || "unknown";
+        const errorDescription = hashParams.get("error_description") || "";
+
+        // Map error codes to user-friendly messages
+        let friendlyMessage = "Something went wrong with your access link.";
+        if (errorCode === "otp_expired" || errorDescription.includes("expired")) {
+          friendlyMessage = "Your access link has expired. Magic links are valid for 1 hour and can only be used once.";
+        } else if (errorCode === "access_denied") {
+          friendlyMessage = "Access was denied. The link may have already been used or is invalid.";
+        }
+
+        setAuthError({
+          code: errorCode,
+          message: friendlyMessage,
+        });
+
+        // Clean up the URL hash
+        window.history.replaceState(null, "", window.location.pathname + window.location.search);
+      }
+    }
+  }, []);
+
   // Form state
   const [address, setAddress] = useState("");
   const [city, setCity] = useState("");
@@ -296,6 +331,65 @@ function StartPageContent() {
           </div>
         </div>
       </div>
+
+      {/* Auth Error Modal - Shows when magic link fails */}
+      {authError && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="max-w-md w-full shadow-2xl border-0 animate-in fade-in zoom-in duration-200">
+            <CardContent className="p-8 text-center">
+              <div className="w-16 h-16 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-6">
+                <Clock className="h-8 w-8" />
+              </div>
+
+              <h2 className="text-xl font-bold text-slate-900 mb-2">
+                Link Expired
+              </h2>
+              <p className="text-muted-foreground mb-6">
+                {authError.message}
+              </p>
+
+              <div className="bg-slate-50 rounded-lg p-4 mb-6 text-left">
+                <h3 className="font-medium text-slate-900 mb-2 text-sm">
+                  No worries! Here&apos;s what to do:
+                </h3>
+                <ol className="space-y-2 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+                      1
+                    </span>
+                    Enter your property details again (takes 30 seconds)
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+                      2
+                    </span>
+                    Request a new access link to your email
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="w-5 h-5 rounded-full bg-primary text-white flex items-center justify-center text-xs shrink-0 mt-0.5">
+                      3
+                    </span>
+                    Click the new link within 1 hour
+                  </li>
+                </ol>
+              </div>
+
+              <Button
+                onClick={() => setAuthError(null)}
+                className="w-full h-12"
+                size="lg"
+              >
+                Get a New Link
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+
+              <p className="text-xs text-muted-foreground mt-4">
+                Your previous results aren&apos;t lost—just re-enter your details to continue.
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="mx-auto px-4 pb-16">
