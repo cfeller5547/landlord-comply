@@ -37,6 +37,7 @@ import {
   Bell,
   FlaskConical,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -439,271 +440,308 @@ function StartPageContent() {
             </Card>
           )}
 
-          {/* Step 2: Results Preview */}
+          {/* Step 2: Results Preview - Restructured for "wow" */}
           {step === 2 && preview && (
-            <div className="space-y-6">
-              {/* Deadline Card */}
+            <div className="space-y-4">
+              {/* CARD 1: Deadline - Action-focused */}
               <Card className="shadow-lg border-0 overflow-hidden">
                 <div className={cn(
-                  "p-6 border-b",
+                  "p-6",
                   getDeadlineColor(preview.deadline.daysRemaining)
                 )}>
-                  <div className="flex items-center gap-3 mb-2">
-                    <Clock className="h-6 w-6" />
-                    <span className="text-sm font-medium uppercase tracking-wide">
-                      Your Deadline
-                    </span>
-                  </div>
-                  <div className="text-3xl font-bold mb-1">
-                    {formatDate(preview.deadline.date)}
-                  </div>
-                  <div className="text-sm">
-                    {preview.deadline.daysRemaining < 0 ? (
+                  {/* Coverage badge - prominent */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
                       <span className="font-medium">
-                        {Math.abs(preview.deadline.daysRemaining)} days overdue
+                        {preview.jurisdiction.city
+                          ? `${preview.jurisdiction.city}, ${preview.jurisdiction.state}`
+                          : preview.jurisdiction.state}
                       </span>
-                    ) : preview.deadline.daysRemaining === 0 ? (
-                      <span className="font-medium">Due today</span>
-                    ) : (
-                      <span>
-                        <span className="font-medium">{preview.deadline.daysRemaining} days</span> remaining
-                      </span>
-                    )}
-                    <span className="mx-2">|</span>
-                    {preview.deadline.deadlineDays} days from move-out
+                    </div>
+                    <div
+                      className={cn(
+                        "px-3 py-1 rounded-full text-xs font-semibold flex items-center gap-1.5",
+                        preview.jurisdiction.coverageLevel === "FULL"
+                          ? "bg-green-600 text-white"
+                          : preview.jurisdiction.coverageLevel === "PARTIAL"
+                          ? "bg-amber-500 text-white"
+                          : "bg-slate-600 text-white"
+                      )}
+                    >
+                      {preview.jurisdiction.coverageLevel === "FULL" ? (
+                        <>
+                          <CheckCircle2 className="h-3 w-3" />
+                          State + City Rules
+                        </>
+                      ) : preview.jurisdiction.coverageLevel === "PARTIAL" ? (
+                        <>Partial Coverage</>
+                      ) : (
+                        <>State Rules Only</>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Main deadline message */}
+                  <p className="text-sm font-medium mb-1 opacity-90">
+                    You must send the deposit disposition by:
+                  </p>
+                  <p className="text-3xl sm:text-4xl font-bold mb-3">
+                    {formatDate(preview.deadline.date)}
+                  </p>
+
+                  {/* Time remaining - prominent */}
+                  <div className="flex flex-wrap items-center gap-3 mb-4">
+                    <div className="flex items-center gap-2 bg-white/20 rounded-full px-3 py-1">
+                      <Clock className="h-4 w-4" />
+                      <span className="font-semibold">
+                        {preview.deadline.daysRemaining < 0 ? (
+                          <>{Math.abs(preview.deadline.daysRemaining)} days overdue</>
+                        ) : preview.deadline.daysRemaining === 0 ? (
+                          <>Due today!</>
+                        ) : (
+                          <>{preview.deadline.daysRemaining} days left</>
+                        )}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Safe mail-by suggestion */}
+                  {preview.deadline.daysRemaining > 3 && (
+                    <div className="bg-white/10 rounded-lg p-3 text-sm">
+                      <span className="font-medium">Tip:</span> To be safe, mail by{" "}
+                      <span className="font-semibold">
+                        {new Date(new Date(preview.deadline.date).setDate(new Date(preview.deadline.date).getDate() - 3)).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
+                      </span>
+                      {" "}(3 days buffer for delivery)
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* CARD 2: Your Packet - THE WOW + CONVERSION */}
+              <Card className="shadow-lg border-2 border-primary/20 overflow-hidden">
+                <div className="bg-gradient-to-r from-primary/5 to-primary/10 p-4 border-b">
+                  <h3 className="font-bold text-lg text-slate-900 flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-primary" />
+                    Your Ready-to-Send Packet
+                  </h3>
+                  <p className="text-sm text-muted-foreground">
+                    Everything you need to return the deposit correctly
+                  </p>
                 </div>
 
-                <CardContent className="p-6">
-                  {/* Jurisdiction Info */}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-6">
-                    <MapPin className="h-4 w-4" />
-                    <span>
-                      {preview.jurisdiction.city
-                        ? `${preview.jurisdiction.city}, ${preview.jurisdiction.state}`
-                        : preview.jurisdiction.state}
-                    </span>
-                    <span
-                      className={cn(
-                        "px-2 py-0.5 rounded-full text-xs font-medium",
-                        preview.jurisdiction.coverageLevel === "FULL"
-                          ? "bg-green-100 text-green-700"
-                          : preview.jurisdiction.coverageLevel === "PARTIAL"
-                          ? "bg-amber-100 text-amber-700"
-                          : "bg-slate-100 text-slate-700"
-                      )}
-                    >
-                      {preview.jurisdiction.coverageLevel.replace("_", " ")} coverage
-                    </span>
-                  </div>
-
-                  {/* Required Steps Checklist */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-primary" />
-                      Required Steps
-                    </h3>
-                    <div className="space-y-3">
-                      {preview.checklist.map((item, i) => (
-                        <div
-                          key={i}
-                          className="flex items-start gap-3 p-3 bg-slate-50 rounded-lg"
-                        >
-                          <div className="w-6 h-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-medium shrink-0">
-                            {i + 1}
-                          </div>
-                          <div>
-                            <div className="font-medium text-slate-900">
-                              {item.label}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              {item.description}
+                <CardContent className="p-5">
+                  {/* PDF Previews - Visual "wow" */}
+                  <div className="grid grid-cols-2 gap-4 mb-6">
+                    {/* Notice Letter Preview */}
+                    <div className="relative group">
+                      <div className="aspect-[8.5/11] bg-white border-2 border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 to-white p-3">
+                          <div className="text-[6px] sm:text-[8px] text-slate-400 space-y-1">
+                            <div className="font-bold text-slate-600 text-[8px] sm:text-[10px]">SECURITY DEPOSIT DISPOSITION</div>
+                            <div>Date: {new Date().toLocaleDateString()}</div>
+                            <div>To: [Tenant Name]</div>
+                            <div>Property: {address || "123 Main St"}</div>
+                            <div className="border-t border-dashed my-1 pt-1">
+                              Pursuant to {preview.jurisdiction.stateCode} law...
                             </div>
                           </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Key Rules */}
-                  <div className="mb-6">
-                    <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                      <Scale className="h-5 w-5 text-primary" />
-                      Key Requirements
-                    </h3>
-                    <div className="grid grid-cols-2 gap-3">
-                      {preview.rules.interestRequired && (
-                        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                          <div className="text-sm font-medium text-amber-800">
-                            Interest Required
+                        {/* Lock overlay */}
+                        <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center backdrop-blur-[1px]">
+                          <div className="text-center text-white">
+                            <Lock className="h-6 w-6 mx-auto mb-1" />
+                            <span className="text-xs font-medium">PDF</span>
                           </div>
-                          <div className="text-xs text-amber-600">
-                            {preview.rules.interestRate
-                              ? `${(preview.rules.interestRate * 100).toFixed(2)}% annually`
-                              : "Rate varies"}
-                          </div>
-                        </div>
-                      )}
-                      {preview.rules.itemizationRequired && (
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                          <div className="text-sm font-medium text-blue-800">
-                            Itemization Required
-                          </div>
-                          <div className="text-xs text-blue-600">
-                            List each deduction
-                          </div>
-                        </div>
-                      )}
-                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg col-span-2">
-                        <div className="text-sm font-medium text-slate-800">
-                          Allowed Delivery Methods
-                        </div>
-                        <div className="text-xs text-slate-600">
-                          {preview.rules.allowedDeliveryMethods.join(", ")}
                         </div>
                       </div>
+                      <p className="text-xs font-medium text-center mt-2 text-slate-700">Notice Letter</p>
+                    </div>
+
+                    {/* Itemized Statement Preview */}
+                    <div className="relative group">
+                      <div className="aspect-[8.5/11] bg-white border-2 border-slate-200 rounded-lg shadow-sm overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-b from-slate-50 to-white p-3">
+                          <div className="text-[6px] sm:text-[8px] text-slate-400 space-y-1">
+                            <div className="font-bold text-slate-600 text-[8px] sm:text-[10px]">ITEMIZED STATEMENT</div>
+                            <div className="border-b pb-1">Deductions:</div>
+                            <div>1. Cleaning - $___</div>
+                            <div>2. Repairs - $___</div>
+                            <div className="border-t pt-1 font-medium">
+                              Total Refund: $___
+                            </div>
+                          </div>
+                        </div>
+                        {/* Lock overlay */}
+                        <div className="absolute inset-0 bg-slate-900/60 flex items-center justify-center backdrop-blur-[1px]">
+                          <div className="text-center text-white">
+                            <Lock className="h-6 w-6 mx-auto mb-1" />
+                            <span className="text-xs font-medium">PDF</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs font-medium text-center mt-2 text-slate-700">Itemized Statement</p>
                     </div>
                   </div>
 
-                  {/* Citations */}
-                  <div className="border-t pt-4">
-                    <h3 className="font-semibold text-slate-900 mb-3 text-sm flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                      Legal Citations
-                    </h3>
-                    <div className="space-y-2">
-                      {preview.citations.map((citation, i) => (
-                        <div key={i} className="text-sm">
-                          <span className="font-medium text-slate-700">
-                            {citation.code}
-                          </span>
-                          {citation.title && (
-                            <span className="text-muted-foreground ml-1">
-                              — {citation.title}
-                            </span>
-                          )}
-                          {citation.url && (
-                            <a
-                              href={citation.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="ml-2 text-primary hover:underline inline-flex items-center"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
-                          )}
-                        </div>
-                      ))}
+                  {/* Additional features */}
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    <div className="flex items-center gap-1.5 text-xs bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-full">
+                      <Bell className="h-3 w-3" />
+                      Deadline reminders
                     </div>
-                    <div className="mt-3 text-xs text-muted-foreground">
-                      Version {preview.ruleSetVersion} | Last verified{" "}
-                      {new Date(preview.lastVerified).toLocaleDateString()}
+                    <div className="flex items-center gap-1.5 text-xs bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-full">
+                      <Upload className="h-3 w-3" />
+                      Proof packet export
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs bg-slate-100 text-slate-700 px-2.5 py-1.5 rounded-full">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Audit trail
+                    </div>
+                  </div>
+
+                  {/* Email capture - THE GATE */}
+                  <div className="bg-primary/5 rounded-xl p-4 border border-primary/20">
+                    <p className="text-sm font-semibold text-slate-900 mb-3 text-center">
+                      Enter your email to unlock your packet
+                    </p>
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                        <Input
+                          type="email"
+                          placeholder="Email to receive packet link"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="h-12 pl-10 text-base"
+                        />
+                      </div>
+
+                      {error && (
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                          {error}
+                        </div>
+                      )}
+
+                      <Button
+                        onClick={handleSendEmail}
+                        disabled={emailSending || !email}
+                        className="w-full h-12 text-base bg-primary hover:bg-primary/90 font-semibold"
+                        size="lg"
+                      >
+                        {emailSending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="h-4 w-4 mr-2" />
+                            Email My Packet Link
+                          </>
+                        )}
+                      </Button>
+
+                      <p className="text-xs text-center text-muted-foreground">
+                        No password needed. Free during beta.
+                      </p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Gated Features - Save Your Case */}
+              {/* CARD 3: What You Must Do - Condensed */}
               <Card className="shadow-lg border-0">
-                <CardContent className="p-6">
-                  <h3 className="font-semibold text-slate-900 mb-4 text-center">
-                    Save Your Case + Get Full Access
+                <CardContent className="p-5">
+                  <h3 className="font-semibold text-slate-900 mb-4">
+                    What you must do (minimum)
                   </h3>
 
-                  {/* Locked Features */}
-                  <div className="grid gap-3 mb-6">
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg opacity-75">
-                      <Lock className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">Generate Notice PDF</div>
-                        <div className="text-xs text-muted-foreground">
-                          Compliant letter with required language
-                        </div>
+                  {/* 3 Essential bullets */}
+                  <div className="space-y-3 mb-4">
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">1</div>
+                      <div>
+                        <span className="font-medium text-slate-900">Prepare itemized statement</span>
+                        <span className="text-muted-foreground"> — list every deduction with amounts</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg opacity-75">
-                      <Lock className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">Itemized Statement</div>
-                        <div className="text-xs text-muted-foreground">
-                          Professional deduction breakdown
-                        </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">2</div>
+                      <div>
+                        <span className="font-medium text-slate-900">Include receipts/estimates</span>
+                        <span className="text-muted-foreground"> — required for repairs over $125</span>
                       </div>
                     </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg opacity-75">
-                      <Lock className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">Deadline Reminders</div>
-                        <div className="text-xs text-muted-foreground">
-                          Email alerts at 7, 3, and 1 day before
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg opacity-75">
-                      <Lock className="h-4 w-4 text-muted-foreground" />
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">Proof Packet Export</div>
-                        <div className="text-xs text-muted-foreground">
-                          Complete audit trail for disputes
-                        </div>
+                    <div className="flex items-start gap-3">
+                      <div className="w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center text-sm font-bold shrink-0">3</div>
+                      <div>
+                        <span className="font-medium text-slate-900">Send via approved method + keep proof</span>
+                        <span className="text-muted-foreground"> — {preview.rules.allowedDeliveryMethods.slice(0, 2).join(", ")}</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Email Capture */}
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="email" className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        Your Email
-                      </Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@example.com"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="h-12"
-                      />
+                  {/* Accordion for full checklist */}
+                  <details className="group">
+                    <summary className="flex items-center gap-2 text-sm text-primary font-medium cursor-pointer hover:underline">
+                      <ChevronDown className="h-4 w-4 transition-transform group-open:rotate-180" />
+                      Show full {preview.checklist.length}-step checklist
+                    </summary>
+                    <div className="mt-4 space-y-2 pl-2 border-l-2 border-slate-200">
+                      {preview.checklist.map((item, i) => (
+                        <div key={i} className="text-sm py-1">
+                          <span className="font-medium text-slate-700">{i + 1}. {item.label}</span>
+                          {item.description && (
+                            <span className="text-muted-foreground"> — {item.description}</span>
+                          )}
+                        </div>
+                      ))}
                     </div>
-
-                    {error && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-700 text-sm flex items-start gap-2">
-                        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                        {error}
-                      </div>
-                    )}
-
-                    <Button
-                      onClick={handleSendEmail}
-                      disabled={emailSending || !email}
-                      className="w-full h-12 text-base bg-primary hover:bg-primary/90"
-                      size="lg"
-                    >
-                      {emailSending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-4 w-4 mr-2" />
-                          Save My Case + Get Access Link
-                        </>
-                      )}
-                    </Button>
-
-                    <div className="text-center space-y-1">
-                      <p className="text-xs text-muted-foreground">
-                        No password required. We'll email a secure access link.
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        We only email about this case + reminders you opt into.
-                      </p>
-                    </div>
-                  </div>
+                  </details>
                 </CardContent>
               </Card>
+
+              {/* Key Requirements - As chips */}
+              <div className="flex flex-wrap gap-2">
+                {preview.rules.itemizationRequired && (
+                  <div className="flex items-center gap-1.5 text-sm bg-blue-100 text-blue-800 px-3 py-1.5 rounded-full font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5" />
+                    Itemization required
+                  </div>
+                )}
+                {preview.rules.interestRequired && (
+                  <div className="flex items-center gap-1.5 text-sm bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full font-medium">
+                    <DollarSign className="h-3.5 w-3.5" />
+                    Interest: {preview.rules.interestRate ? `${(preview.rules.interestRate * 100).toFixed(1)}%` : "Required"}
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5 text-sm bg-slate-100 text-slate-700 px-3 py-1.5 rounded-full font-medium">
+                  <Send className="h-3.5 w-3.5" />
+                  Delivery: {preview.rules.allowedDeliveryMethods.slice(0, 2).join(", ")}
+                </div>
+              </div>
+
+              {/* Citations footer */}
+              <div className="text-xs text-muted-foreground border-t pt-4">
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {preview.citations.map((citation, i) => (
+                    <span key={i} className="inline-flex items-center gap-1">
+                      {citation.code}
+                      {citation.url && (
+                        <a href={citation.url} target="_blank" rel="noopener noreferrer" className="text-primary">
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-2">
+                  Rules v{preview.ruleSetVersion} · Verified {new Date(preview.lastVerified).toLocaleDateString()}
+                </p>
+              </div>
 
               {/* Back Button */}
               <div className="text-center pb-24">
@@ -717,35 +755,32 @@ function StartPageContent() {
                 </Button>
               </div>
 
-              {/* Sticky Bottom Bar - Email Capture CTA */}
+              {/* Sticky Bottom Bar - Benefit-first copy */}
               <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-r from-primary via-primary to-primary/90 shadow-[0_-4px_20px_rgba(0,0,0,0.15)] z-50">
                 <div className="container mx-auto px-4 py-4">
                   <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-4">
-                    {/* Left side - Value prop */}
                     <div className="flex-1 flex items-center gap-3">
                       <div className="hidden sm:flex h-10 w-10 rounded-full bg-white/20 items-center justify-center shrink-0">
                         <FileText className="h-5 w-5 text-white" />
                       </div>
                       <div className="text-center sm:text-left">
                         <p className="text-sm sm:text-base font-semibold text-white">
-                          Get your compliant notice PDF + deadline reminders
+                          Unlock your ready-to-send packet (PDF)
                         </p>
                         <p className="text-xs text-white/80 hidden sm:block">
-                          Save this case to your account — free during beta
+                          No password — secure link emailed to you
                         </p>
                       </div>
                     </div>
-
-                    {/* Right side - Email capture */}
                     <div className="flex items-center gap-2 w-full sm:w-auto">
                       <div className="relative flex-1 sm:flex-none">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                         <Input
                           type="email"
-                          placeholder="you@example.com"
+                          placeholder="Email for packet link"
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="h-11 pl-9 w-full sm:w-56 bg-white border-0 shadow-md focus:ring-2 focus:ring-white/50"
+                          className="h-11 pl-9 w-full sm:w-56 bg-white border-0 shadow-md"
                         />
                       </div>
                       <Button
@@ -757,7 +792,7 @@ function StartPageContent() {
                           <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
                           <>
-                            Save Case
+                            Email Packet
                             <ArrowRight className="h-4 w-4 ml-1.5" />
                           </>
                         )}
