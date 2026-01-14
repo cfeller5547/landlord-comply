@@ -244,11 +244,18 @@ This is a legal-adjacent product. Users must trust our accuracy.
   - Step 1: Property details form
   - Step 2: Results preview with deadline + packet (email gate)
   - Step 3: Email sent confirmation
+- `/start/complete` - Magic link landing page (creates case, redirects to packet)
+- `/cases/[id]/packet` - **Lightweight packet download** (minimal chrome, no sidebar)
+  - Primary "Download Both PDFs" CTA
+  - Trust/citation info (coverage level, verified date, statute)
+  - Draft warning if tenant/deductions missing
+  - Delivery instructions checklist
 - `/beta` - Beta signup page (early access collection)
 - `/coverage` - States/cities supported
 - `/pricing` - Plan comparison
 - `/contact` - Contact form
-- Terms, Privacy, Disclaimers
+- `/terms` - Terms of service
+- `/privacy` - Privacy policy
 
 ### App Pages (Authenticated)
 - `/dashboard` - **Action Center**: urgency-focused view answering "What needs attention today?"
@@ -307,7 +314,15 @@ This is a legal-adjacent product. Users must trust our accuracy.
 │   │   ├── page.tsx                # Landing page (address demo, conversion-focused)
 │   │   ├── layout.tsx              # Root layout with Analytics + SpeedInsights
 │   │   ├── globals.css             # Calm Ledger theme
+│   │   ├── start/                  # Beta wizard (public, no auth required)
+│   │   │   ├── page.tsx            # 3-step wizard with results preview
+│   │   │   └── complete/page.tsx   # Magic link landing (creates case → packet)
+│   │   ├── cases/                  # Public case pages (outside app chrome)
+│   │   │   └── [id]/
+│   │   │       └── packet/page.tsx # Lightweight packet download (minimal UI)
 │   │   ├── beta/page.tsx           # Beta signup page
+│   │   ├── terms/page.tsx          # Terms of service
+│   │   ├── privacy/page.tsx        # Privacy policy
 │   │   ├── (public)/               # Public pages wrapper
 │   │   │   ├── layout.tsx
 │   │   │   └── contact/page.tsx    # Contact form
@@ -320,7 +335,8 @@ This is a legal-adjacent product. Users must trust our accuracy.
 │   │   ├── api/                    # API routes
 │   │   │   ├── start/              # Beta wizard endpoints
 │   │   │   │   ├── preview/route.ts         # POST preview deadline + requirements
-│   │   │   │   └── email/route.ts           # POST send branded email with magic link
+│   │   │   │   ├── email/route.ts           # POST send branded email with magic link
+│   │   │   │   └── complete/route.ts        # POST finalize draft → create case
 │   │   │   ├── cases/
 │   │   │   │   ├── route.ts                    # GET/POST cases
 │   │   │   │   └── [id]/
@@ -603,7 +619,8 @@ model Citation {
 - **Seed data**: 13 jurisdictions with rules (CA, NY, TX, WA, IL, CO, FL, MA + major cities)
 
 **Deployment & Monitoring**
-- **Production**: Deployed on Vercel at https://landlord-comply.vercel.app
+- **Production**: Deployed on Vercel at https://landlordcomply.com (custom domain)
+- **Vercel URL**: https://landlord-comply.vercel.app (redirects to custom domain)
 - **Analytics**: Vercel Analytics + Speed Insights enabled
 - Environment variables configured (including `SUPABASE_SERVICE_ROLE_KEY`)
 
@@ -677,9 +694,12 @@ NEXT_PUBLIC_SUPABASE_URL="https://txziykaoatbqvihveasu.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
 SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"  # Required for magic links + storage
 
+# App URL (for magic link redirects)
+NEXT_PUBLIC_APP_URL="https://landlordcomply.com"  # Production custom domain
+
 # Email (Resend)
 RESEND_API_KEY="re_..."
-RESEND_FROM_EMAIL="LandlordComply <onboarding@resend.dev>"  # Or your verified domain
+RESEND_FROM_EMAIL="LandlordComply <noreply@landlordcomply.com>"  # Verified domain
 
 # Google AI (Gemini) - Optional, for AI deduction improvement
 GOOGLE_AI_API_KEY="AIza..."
@@ -732,6 +752,13 @@ Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/
 |--------|----------|-------------|
 | PATCH | `/api/cases/[id]/tenants/[tenantId]/forwarding-address` | Update forwarding address |
 | GET | `/api/cases/[id]/tenants/[tenantId]/forwarding-address` | Get templates (email/letter) |
+
+### Beta Wizard (Start Flow)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/start/preview` | Get deadline + requirements preview |
+| POST | `/api/start/email` | Send magic link email with draft case |
+| POST | `/api/start/complete` | Finalize draft → create real case |
 
 ### Other
 | Method | Endpoint | Description |
