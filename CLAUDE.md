@@ -212,8 +212,16 @@ This is a legal-adjacent product. Users must trust our accuracy.
 
 ## User Flows
 
-### Flow A: First-Time User → First Packet in 15 Minutes
-1. Sign up
+### Flow A: Beta Entry → Instant Value → Magic Link Auth
+1. Visit `/start` (beta wizard)
+2. Enter property address, state, move-out date
+3. Get instant deadline + requirements preview (no signup required)
+4. Enter email to unlock packet → receive branded email with magic link
+5. Click link → auto-authenticated → access full dashboard
+6. Draft case converted to real case → complete workflow
+
+### Flow B: First-Time User → First Packet in 15 Minutes
+1. Sign up via `/signup` (traditional flow)
 2. Add property address → jurisdiction auto-detected
 3. Create move-out case → rules displayed with deadline
 4. Enter deposit amount + deductions
@@ -221,7 +229,7 @@ This is a legal-adjacent product. Users must trust our accuracy.
 6. Export proof packet
 7. Close case when sent
 
-### Flow B: Repeat Use (Active Landlord)
+### Flow C: Repeat Use (Active Landlord)
 1. Dashboard shows active cases + upcoming deadlines
 2. Open case → update deductions → regenerate docs
 3. Export packet → mark delivered → close case
@@ -232,8 +240,14 @@ This is a legal-adjacent product. Users must trust our accuracy.
 
 ### Public Pages
 - `/` - Landing page with address input demo
+- `/start` - **Beta wizard**: 3-step instant value flow
+  - Step 1: Property details form
+  - Step 2: Results preview with deadline + packet (email gate)
+  - Step 3: Email sent confirmation
+- `/beta` - Beta signup page (early access collection)
 - `/coverage` - States/cities supported
 - `/pricing` - Plan comparison
+- `/contact` - Contact form
 - Terms, Privacy, Disclaimers
 
 ### App Pages (Authenticated)
@@ -261,8 +275,9 @@ This is a legal-adjacent product. Users must trust our accuracy.
 |-------|------------|
 | Framework | Next.js 16 (App Router, TypeScript) |
 | Database | PostgreSQL via Supabase + Prisma ORM |
-| Auth | Supabase Auth (email/password) |
+| Auth | Supabase Auth (email/password + magic links) |
 | Storage | Supabase Storage (attachments, documents) |
+| Email | Resend (transactional emails with branded templates) |
 | PDF Generation | @react-pdf/renderer |
 | ZIP Export | archiver |
 | AI | Google Gemini API (@google/generative-ai) |
@@ -303,6 +318,9 @@ This is a legal-adjacent product. Users must trust our accuracy.
 │   │   │   └── actions.ts          # Server actions for auth
 │   │   ├── auth/callback/route.ts  # OAuth callback handler
 │   │   ├── api/                    # API routes
+│   │   │   ├── start/              # Beta wizard endpoints
+│   │   │   │   ├── preview/route.ts         # POST preview deadline + requirements
+│   │   │   │   └── email/route.ts           # POST send branded email with magic link
 │   │   │   ├── cases/
 │   │   │   │   ├── route.ts                    # GET/POST cases
 │   │   │   │   └── [id]/
@@ -529,11 +547,20 @@ model Citation {
 
 ## Current State
 
-### What's Built (Complete MVP)
+### What's Built (Complete MVP + Beta Features)
 
 **Frontend**
 - All pages styled and functional with Tailwind CSS v4 + shadcn/ui
 - Interactive landing page with address autocomplete demo
+- **NEW: `/start` Beta Wizard** (3-step instant value flow):
+  - Step 1: Property details form with state/city selection
+  - Step 2: Results preview with improved UX:
+    - Action-focused deadline card with source citations
+    - Packet card with PDF previews + watermarks
+    - 3-bullet checklist with accordion for full details
+    - Email gate with reassurance copy
+    - Two-column layout on desktop (lg:grid-cols-5)
+  - Step 3: Email sent confirmation
 - **Dashboard redesigned as "Action Center"** with urgency-focused UX:
   - Action Required block with per-row CTAs
   - Potential exposure calculations per case
@@ -551,6 +578,14 @@ model Citation {
 
 **Backend**
 - Complete API layer with all CRUD operations
+- **NEW: Beta wizard API** (`/api/start/*`):
+  - Preview endpoint for instant deadline + requirements
+  - Email endpoint with Resend integration + Supabase magic links
+  - Draft case creation and conversion flow
+- **Email Integration**:
+  - Resend for transactional emails
+  - Branded HTML templates with deadline info
+  - Magic link authentication via Supabase Admin API
 - PDF generation for notice letters and itemized statements
 - **Proof packet ZIP export** with all case documents, attachments, audit log
 - File upload/download via Supabase Storage (using service role key)
@@ -635,14 +670,22 @@ npx tsx scripts/setup-storage.ts  # Create Supabase storage bucket
 ```env
 # Database (Prisma)
 DATABASE_URL="postgresql://..."
+DIRECT_URL="postgresql://..."  # For migrations
 
 # Supabase
-NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_URL="https://txziykaoatbqvihveasu.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY="your-anon-key"
-SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"  # For storage setup
+SUPABASE_SERVICE_ROLE_KEY="your-service-role-key"  # Required for magic links + storage
+
+# Email (Resend)
+RESEND_API_KEY="re_..."
+RESEND_FROM_EMAIL="LandlordComply <onboarding@resend.dev>"  # Or your verified domain
 
 # Google AI (Gemini) - Optional, for AI deduction improvement
-GOOGLE_AI_API_KEY="your-gemini-api-key"
+GOOGLE_AI_API_KEY="AIza..."
+
+# App Stage
+NEXT_PUBLIC_APP_STAGE="beta"  # or "production"
 ```
 
 Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
