@@ -70,6 +70,11 @@ function CompletePageContent() {
         setCaseId(data.caseId);
         setStatus("success");
 
+        // Clear any pending draft from localStorage
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("landlordcomply_pending_draft");
+        }
+
         // Auto-redirect after a moment
         setTimeout(() => {
           router.push(`/cases/${data.caseId}`);

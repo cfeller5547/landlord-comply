@@ -238,6 +238,12 @@ function StartPageContent() {
         return;
       }
 
+      // Store draftId in localStorage for redirect handling
+      // (In case Supabase redirects to / instead of /start/complete)
+      if (typeof window !== "undefined" && draftId) {
+        localStorage.setItem("landlordcomply_pending_draft", draftId);
+      }
+
       setMaskedEmail(data.email);
       setEmailSent(true);
       setStep(3);
