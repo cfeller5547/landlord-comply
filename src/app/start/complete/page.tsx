@@ -75,9 +75,9 @@ function CompletePageContent() {
           localStorage.removeItem("landlordcomply_pending_draft");
         }
 
-        // Auto-redirect after a moment
+        // Auto-redirect to lightweight packet download page
         setTimeout(() => {
-          router.push(`/cases/${data.caseId}`);
+          router.push(`/cases/${data.caseId}/packet`);
         }, 2000);
       } catch (err) {
         setError("Something went wrong. Please try again.");
@@ -117,13 +117,13 @@ function CompletePageContent() {
                     Your Case is Ready!
                   </h2>
                   <p className="text-muted-foreground mb-6">
-                    Redirecting you to your case workspace...
+                    Redirecting you to download your documents...
                   </p>
                   <Button
-                    onClick={() => router.push(`/cases/${caseId}`)}
+                    onClick={() => router.push(`/cases/${caseId}/packet`)}
                     className="w-full"
                   >
-                    Go to My Case
+                    Download My PDFs
                     <ArrowRight className="h-4 w-4 ml-2" />
                   </Button>
                 </>
