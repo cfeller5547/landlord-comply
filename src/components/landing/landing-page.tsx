@@ -194,7 +194,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
               <Link href="/login">Sign In</Link>
             </Button>
             <Button size="sm" className="bg-cta hover:bg-cta/90 text-cta-foreground" asChild>
-              <Link href="/start">{content.ctaText}</Link>
+              <Link href="/signup">{content.ctaText}</Link>
             </Button>
           </div>
         </div>
@@ -444,7 +444,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                       </div>
 
                       <Button className="mt-4 w-full h-12 text-base font-semibold bg-cta hover:bg-cta/90 text-cta-foreground shadow-lg transition-all hover:shadow-xl" size="lg" asChild>
-                        <Link href="/start">
+                        <Link href="/signup">
                           {variant === "beta" ? "Join Beta - Get This Free" : "Create My Full Packet"}
                           <ArrowRight className="ml-2 h-5 w-5" />
                         </Link>
@@ -595,7 +595,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
               </p>
 
               <Button className="mt-6 w-full" size="lg" asChild>
-                <Link href="/start">
+                <Link href="/signup">
                   {variant === "beta" ? "Join the Beta - It's Free" : "Get Started"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
@@ -1053,7 +1053,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
           {/* CTA after tabs */}
           <div className="mt-10 text-center">
             <Button className="bg-cta hover:bg-cta/90 text-cta-foreground shadow-lg" size="lg" asChild>
-              <Link href="/start">
+              <Link href="/signup">
                 {variant === "beta" ? "Join Beta - Get This Free" : "Generate My Packet"}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
@@ -1151,7 +1151,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                 </div>
 
                 <Button className="mt-6 w-full bg-cta hover:bg-cta/90 text-cta-foreground shadow-lg transition-all hover:shadow-xl" size="lg" asChild>
-                  <Link href="/start">
+                  <Link href="/signup">
                     {variant === "beta" ? "Join Beta - Get This Free" : "Generate My Packet"}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
@@ -1273,7 +1273,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                     <PricingFeature>PDF notice generation</PricingFeature>
                   </ul>
                   <Button variant="outline" className="mt-6 w-full" asChild>
-                    <Link href="/start">Start Free</Link>
+                    <Link href="/signup">Start Free</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -1294,7 +1294,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                     <PricingFeature>Proof packet export</PricingFeature>
                   </ul>
                   <Button variant="outline" className="mt-6 w-full" asChild>
-                    <Link href="/start">Buy Packet</Link>
+                    <Link href="/signup">Buy Packet</Link>
                   </Button>
                   <p className="mt-3 text-xs text-center text-muted-foreground">
                     Apply $29 toward Pro within 7 days
@@ -1323,7 +1323,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
                     <PricingFeature>Priority support</PricingFeature>
                   </ul>
                   <Button className="mt-6 w-full" asChild>
-                    <Link href="/start">Start Pro</Link>
+                    <Link href="/signup">Start Pro</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -1393,7 +1393,7 @@ export default function LandingPage({ variant }: LandingPageProps) {
               : "Get your deadline, rules, and proof packet in 15 minutes. Free to start."}
           </p>
           <Button size="lg" variant="secondary" className="mt-6" asChild>
-            <Link href="/start">
+            <Link href="/signup">
               {variant === "beta" ? "Join the Beta" : "Generate My First Packet"}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
