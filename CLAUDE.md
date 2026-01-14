@@ -264,12 +264,16 @@ This is a legal-adjacent product. Users must trust our accuracy.
 | Auth | Supabase Auth (email/password) |
 | Storage | Supabase Storage (attachments, documents) |
 | PDF Generation | @react-pdf/renderer |
+| ZIP Export | archiver |
 | AI | Google Gemini API (@google/generative-ai) |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | Icons | lucide-react |
 | Fonts | Inter |
 | Toast | Sonner |
 | Theme | Custom "Calm Ledger" design system |
+| Analytics | Vercel Analytics + Speed Insights |
+| Logging | Winston |
+| Testing | Vitest + Playwright + Testing Library |
 
 ### Design System: "Calm Ledger"
 - **Primary**: Deep teal `hsl(198 83% 23%)` - professional, trustworthy
@@ -283,80 +287,132 @@ This is a legal-adjacent product. Users must trust our accuracy.
 ## Project Structure
 
 ```
-src/
-├── app/
-│   ├── page.tsx                # Landing page (address demo, conversion-focused)
-│   ├── globals.css             # Calm Ledger theme
-│   ├── (public)/layout.tsx     # Public pages wrapper
-│   ├── (auth)/                 # Auth pages
-│   │   ├── layout.tsx
-│   │   ├── login/page.tsx
-│   │   ├── signup/page.tsx
-│   │   └── actions.ts          # Server actions for auth
-│   ├── auth/callback/route.ts  # OAuth callback handler
-│   ├── api/                    # API routes
-│   │   ├── cases/
-│   │   │   ├── route.ts                    # GET/POST cases
-│   │   │   └── [id]/
-│   │   │       ├── route.ts                # GET/PATCH/DELETE case
-│   │   │       ├── status/route.ts         # PATCH status + delivery proof
-│   │   │       ├── deductions/route.ts     # GET/POST/PATCH/DELETE deductions
-│   │   │       ├── attachments/route.ts    # GET/POST/DELETE attachments
-│   │   │       ├── checklist/route.ts      # GET/PATCH/POST/DELETE checklist
-│   │   │       ├── documents/generate/route.ts  # POST generate PDFs
-│   │   │       ├── exposure/route.ts       # GET penalty exposure
-│   │   │       ├── quality-check/route.ts  # GET quality checklist
-│   │   │       └── tenants/[tenantId]/
-│   │   │           └── forwarding-address/route.ts  # PATCH/GET + templates
-│   │   ├── deductions/
-│   │   │   └── [id]/improve/route.ts       # POST AI improvement
-│   │   ├── jurisdictions/
-│   │   │   ├── route.ts                    # GET all jurisdictions
-│   │   │   └── lookup/route.ts             # GET lookup by state/city
-│   │   ├── properties/route.ts             # GET/POST properties
-│   │   └── dashboard/route.ts              # GET dashboard stats
-│   └── (app)/
-│       ├── layout.tsx          # App shell with sidebar
-│       ├── dashboard/page.tsx  # KPI cards + Deadline Radar table
-│       ├── cases/
-│       │   ├── page.tsx        # Cases list
-│       │   ├── new/page.tsx    # 3-step new case wizard
-│       │   └── [id]/page.tsx   # Case workspace (all features)
-│       ├── coverage/page.tsx   # Jurisdiction grid
-│       ├── documents/page.tsx  # Document library
-│       └── settings/page.tsx   # Account settings
-├── components/
-│   ├── ui/                     # shadcn/ui components
-│   ├── layout/
-│   │   ├── sidebar.tsx         # App navigation
-│   │   └── user-menu.tsx       # User dropdown
-│   └── domain/                 # Business-specific components
-│       ├── deadline-chip.tsx   # Color-coded countdown
-│       ├── coverage-badge.tsx  # full/partial/state_only
-│       ├── status-badge.tsx    # active/pending/sent/closed
-│       └── trust-banner.tsx    # "Not legal advice" disclaimer
-├── lib/
-│   ├── ai/
-│   │   └── gemini.ts           # Google Gemini AI integration
-│   ├── pdf/
-│   │   ├── notice-letter.tsx   # Notice letter PDF template
-│   │   └── itemized-statement.tsx  # Itemized statement PDF template
-│   ├── supabase/
-│   │   ├── client.ts           # Browser Supabase client
-│   │   ├── server.ts           # Server Supabase client
-│   │   ├── admin.ts            # Admin client with service role key (for storage uploads)
-│   │   └── middleware.ts       # Auth middleware helper
-│   ├── auth.ts                 # getCurrentUser helper
-│   ├── db.ts                   # Prisma client
-│   ├── types.ts                # TypeScript interfaces
-│   ├── mock-data.ts            # Sample jurisdictions + cases
-│   └── utils.ts                # Helpers (cn function)
-├── middleware.ts               # Next.js middleware for auth
+├── src/
+│   ├── app/
+│   │   ├── page.tsx                # Landing page (address demo, conversion-focused)
+│   │   ├── layout.tsx              # Root layout with Analytics + SpeedInsights
+│   │   ├── globals.css             # Calm Ledger theme
+│   │   ├── beta/page.tsx           # Beta signup page
+│   │   ├── (public)/               # Public pages wrapper
+│   │   │   ├── layout.tsx
+│   │   │   └── contact/page.tsx    # Contact form
+│   │   ├── (auth)/                 # Auth pages
+│   │   │   ├── layout.tsx
+│   │   │   ├── login/page.tsx
+│   │   │   ├── signup/page.tsx
+│   │   │   └── actions.ts          # Server actions for auth
+│   │   ├── auth/callback/route.ts  # OAuth callback handler
+│   │   ├── api/                    # API routes
+│   │   │   ├── cases/
+│   │   │   │   ├── route.ts                    # GET/POST cases
+│   │   │   │   └── [id]/
+│   │   │   │       ├── route.ts                # GET/PATCH/DELETE case
+│   │   │   │       ├── status/route.ts         # PATCH status + delivery proof
+│   │   │   │       ├── deductions/route.ts     # GET/POST/PATCH/DELETE deductions
+│   │   │   │       ├── attachments/route.ts    # GET/POST/DELETE attachments
+│   │   │   │       ├── checklist/route.ts      # GET/PATCH/POST/DELETE checklist
+│   │   │   │       ├── proof-packet/route.ts   # GET proof packet ZIP export
+│   │   │   │       ├── documents/
+│   │   │   │       │   ├── generate/route.ts   # POST generate PDFs
+│   │   │   │       │   └── [documentId]/download/route.ts  # GET signed URL
+│   │   │   │       ├── exposure/route.ts       # GET penalty exposure
+│   │   │   │       ├── quality-check/route.ts  # GET quality checklist
+│   │   │   │       └── tenants/[tenantId]/
+│   │   │   │           └── forwarding-address/route.ts  # PATCH/GET + templates
+│   │   │   ├── documents/
+│   │   │   │   └── [id]/
+│   │   │   │       ├── download/route.ts       # GET document download
+│   │   │   │       └── view/route.ts           # GET document for viewing
+│   │   │   ├── deductions/
+│   │   │   │   └── [id]/improve/route.ts       # POST AI improvement
+│   │   │   ├── jurisdictions/
+│   │   │   │   ├── route.ts                    # GET all jurisdictions
+│   │   │   │   └── lookup/route.ts             # GET lookup by state/city
+│   │   │   ├── properties/route.ts             # GET/POST properties
+│   │   │   ├── dashboard/route.ts              # GET dashboard stats
+│   │   │   ├── feedback/route.ts               # POST user feedback
+│   │   │   └── contact/route.ts                # POST contact form
+│   │   └── (app)/
+│   │       ├── layout.tsx          # App shell with sidebar
+│   │       ├── dashboard/page.tsx  # Action Center with urgency focus
+│   │       ├── cases/
+│   │       │   ├── page.tsx        # Cases list
+│   │       │   ├── new/page.tsx    # 3-step new case wizard
+│   │       │   └── [id]/page.tsx   # Case workspace (all features)
+│   │       ├── coverage/page.tsx   # Jurisdiction grid
+│   │       ├── documents/page.tsx  # Document library
+│   │       └── settings/page.tsx   # Account settings
+│   ├── components/
+│   │   ├── ui/                     # shadcn/ui components
+│   │   ├── layout/
+│   │   │   ├── sidebar.tsx         # App navigation
+│   │   │   └── user-menu.tsx       # User dropdown
+│   │   └── domain/                 # Business-specific components
+│   │       ├── deadline-chip.tsx   # Color-coded countdown
+│   │       ├── coverage-badge.tsx  # full/partial/state_only
+│   │       ├── status-badge.tsx    # active/pending/sent/closed
+│   │       └── trust-banner.tsx    # "Not legal advice" disclaimer
+│   ├── lib/
+│   │   ├── ai/
+│   │   │   └── gemini.ts           # Google Gemini AI integration
+│   │   ├── pdf/
+│   │   │   ├── notice-letter.tsx   # Notice letter PDF template
+│   │   │   └── itemized-statement.tsx  # Itemized statement PDF template
+│   │   ├── supabase/
+│   │   │   ├── client.ts           # Browser Supabase client
+│   │   │   ├── server.ts           # Server Supabase client
+│   │   │   ├── admin.ts            # Admin client with service role key
+│   │   │   └── middleware.ts       # Auth middleware helper
+│   │   ├── auth.ts                 # getCurrentUser helper
+│   │   ├── calculations.ts         # Extracted calculation functions (testable)
+│   │   ├── config.ts               # Environment configuration
+│   │   ├── db.ts                   # Prisma client
+│   │   ├── logger.ts               # Winston logger
+│   │   ├── types.ts                # TypeScript interfaces
+│   │   ├── mock-data.ts            # Sample jurisdictions + cases
+│   │   └── utils.ts                # Helpers (cn function)
+│   └── middleware.ts               # Next.js middleware for auth
+├── tests/
+│   ├── setup/
+│   │   ├── vitest.setup.ts         # Global test setup
+│   │   └── test-utils.tsx          # Custom render helpers
+│   ├── mocks/
+│   │   ├── prisma.ts               # Prisma client mock
+│   │   ├── supabase.ts             # Supabase auth mock
+│   │   ├── gemini.ts               # Google AI mock
+│   │   └── logger.ts               # Logger mock
+│   ├── fixtures/
+│   │   ├── jurisdictions.ts        # Test jurisdiction data
+│   │   ├── cases.ts                # Test case data
+│   │   ├── deductions.ts           # Test deduction data
+│   │   ├── documents.ts            # Test document data
+│   │   └── users.ts                # Test user data
+│   ├── helpers/
+│   │   └── api-test-helpers.ts     # API testing utilities
+│   ├── unit/
+│   │   ├── lib/
+│   │   │   └── calculations.test.ts
+│   │   └── components/domain/
+│   │       ├── deadline-chip.test.tsx
+│   │       ├── coverage-badge.test.tsx
+│   │       └── status-badge.test.tsx
+│   ├── integration/api/
+│   │   ├── cases.test.ts
+│   │   ├── case-status.test.ts
+│   │   ├── dashboard.test.ts
+│   │   ├── deductions.test.ts
+│   │   ├── documents.test.ts
+│   │   ├── jurisdictions.test.ts
+│   │   └── properties.test.ts
+│   └── e2e/
+│       └── home.spec.ts            # Playwright E2E tests
 ├── prisma/
-│   ├── schema.prisma           # Database schema
-│   └── seed.ts                 # Seed jurisdictions and rules
-└── scripts/
-    └── setup-storage.ts        # Create Supabase storage bucket
+│   ├── schema.prisma               # Database schema
+│   └── seed.ts                     # Seed jurisdictions and rules
+├── scripts/
+│   └── setup-storage.ts            # Create Supabase storage bucket
+├── vitest.config.ts                # Vitest configuration
+└── playwright.config.ts            # Playwright E2E configuration
 ```
 
 ---
@@ -487,19 +543,22 @@ model Citation {
   - "Saved" badge with generation date and version number
   - "Update" button with versioning helper text
   - Version locking when case marked as Sent
-  - Proof Packet card as workflow climax
+  - Proof Packet card as workflow climax with ZIP export
 - Responsive design (mobile + desktop)
 - Domain components for deadlines, coverage, status
-- Beta badge support via feature flag
+- Beta page for early signup
+- Contact form
 
 **Backend**
 - Complete API layer with all CRUD operations
 - PDF generation for notice letters and itemized statements
+- **Proof packet ZIP export** with all case documents, attachments, audit log
 - File upload/download via Supabase Storage (using service role key)
 - Secure document downloads via signed URLs
 - Google Gemini AI integration for description improvement
 - Quality check and exposure calculator endpoints
 - Feedback collection API
+- Contact form API
 
 **Database & Auth**
 - **Supabase project**: `txziykaoatbqvihveasu` (West US)
@@ -508,9 +567,16 @@ model Citation {
 - **Storage**: Supabase Storage bucket `case-files` for attachments and documents
 - **Seed data**: 13 jurisdictions with rules (CA, NY, TX, WA, IL, CO, FL, MA + major cities)
 
-**Deployment**
-- **Production**: Deployed on Vercel
+**Deployment & Monitoring**
+- **Production**: Deployed on Vercel at https://landlord-comply.vercel.app
+- **Analytics**: Vercel Analytics + Speed Insights enabled
 - Environment variables configured (including `SUPABASE_SERVICE_ROLE_KEY`)
+
+**Testing**
+- **Unit tests**: Vitest for lib functions and domain components
+- **Integration tests**: API route testing with mocked dependencies
+- **E2E tests**: Playwright for browser-based testing
+- Test commands: `npm test`, `npm run test:coverage`, `npm run test:e2e`
 
 **Documentation**
 - `README.md` - Project overview and setup
@@ -521,7 +587,7 @@ model Citation {
 - Real address validation/geocoding API
 - Email service for reminders (7/3/1 days)
 - Payment processing (Stripe)
-- Proof packet ZIP export implementation
+- Error tracking (Sentry)
 
 ---
 
@@ -545,8 +611,18 @@ npm run lint          # ESLint
 # Database
 npx prisma generate   # Generate Prisma client
 npx prisma db push    # Push schema to database
-npx prisma db seed    # Seed jurisdictions and rules (via prisma/seed.ts)
-npx prisma studio     # Open Prisma Studio (database GUI)
+npm run db:seed       # Seed jurisdictions and rules
+npm run db:studio     # Open Prisma Studio (database GUI)
+
+# Testing
+npm test              # Run all tests (Vitest)
+npm run test:watch    # Run tests in watch mode
+npm run test:ui       # Open Vitest UI
+npm run test:unit     # Run unit tests only
+npm run test:integration  # Run integration tests only
+npm run test:coverage # Run with coverage report
+npm run test:e2e      # Run Playwright E2E tests
+npm run test:e2e:ui   # Run E2E tests with UI
 
 # Setup
 npx tsx scripts/setup-storage.ts  # Create Supabase storage bucket
@@ -586,6 +662,7 @@ Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/
 | PATCH | `/api/cases/[id]/status` | Update status + delivery proof |
 | GET | `/api/cases/[id]/exposure` | Get penalty exposure calculation |
 | GET | `/api/cases/[id]/quality-check` | Run pre-send quality check |
+| GET | `/api/cases/[id]/proof-packet` | Download proof packet as ZIP |
 
 ### Deductions
 | Method | Endpoint | Description |
@@ -601,6 +678,8 @@ Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/
 |--------|----------|-------------|
 | POST | `/api/cases/[id]/documents/generate` | Generate PDF (notice/itemized) |
 | GET | `/api/cases/[id]/documents/[documentId]/download` | Download document via signed URL |
+| GET | `/api/documents/[id]/download` | Direct document download |
+| GET | `/api/documents/[id]/view` | View document inline |
 | GET | `/api/cases/[id]/attachments` | List attachments |
 | POST | `/api/cases/[id]/attachments` | Upload attachment |
 | DELETE | `/api/cases/[id]/attachments` | Delete attachment |
@@ -619,6 +698,8 @@ Get your Gemini API key from [Google AI Studio](https://aistudio.google.com/app/
 | GET | `/api/properties` | List properties |
 | POST | `/api/properties` | Create property |
 | GET | `/api/dashboard` | Dashboard stats |
+| POST | `/api/feedback` | Submit user feedback |
+| POST | `/api/contact` | Submit contact form |
 
 ---
 
